@@ -58,8 +58,7 @@ const userSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Index for faster queries
-userSchema.index({ email: 1 });
+// Index for faster queries (email already indexed via unique: true)
 userSchema.index({ createdAt: -1 });
 
 // Hash password before saving

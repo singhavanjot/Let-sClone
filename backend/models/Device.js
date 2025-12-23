@@ -76,9 +76,8 @@ const deviceSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for faster queries
+// Indexes for faster queries (deviceId already indexed via unique: true)
 deviceSchema.index({ userId: 1 });
-deviceSchema.index({ deviceId: 1 });
 deviceSchema.index({ status: 1 });
 deviceSchema.index({ socketId: 1 });
 

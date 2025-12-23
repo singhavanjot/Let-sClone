@@ -117,8 +117,7 @@ const sessionSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for faster queries
-sessionSchema.index({ sessionCode: 1 });
+// Indexes for faster queries (sessionCode already indexed via unique: true)
 sessionSchema.index({ hostDevice: 1 });
 sessionSchema.index({ hostUser: 1 });
 sessionSchema.index({ viewer: 1 });
