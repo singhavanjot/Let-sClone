@@ -64,6 +64,15 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Health check for Render
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/devices', deviceRoutes);

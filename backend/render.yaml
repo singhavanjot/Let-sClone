@@ -1,0 +1,29 @@
+# Render Blueprint for Backend Deployment
+# This file tells Render how to deploy your backend
+
+services:
+  - type: web
+    name: remote-desktop-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false  # Set this manually in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        sync: false  # Set this to your Vercel frontend URL
+      - key: SESSION_TIMEOUT_MS
+        value: 14400000
+      - key: SESSION_CODE_LENGTH
+        value: 6
