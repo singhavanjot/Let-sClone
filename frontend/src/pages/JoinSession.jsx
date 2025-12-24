@@ -85,7 +85,7 @@ function JoinSession() {
       <div>
         <h1 className="text-2xl font-bold text-white">Join Session</h1>
         <p className="text-gray-400 mt-1">
-          Enter a session code to view a remote desktop
+          Enter a session code to view a remote screen
         </p>
       </div>
 
@@ -190,7 +190,7 @@ function JoinSession() {
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/10 text-primary-500 text-xs font-medium mr-3 mt-0.5">
               3
             </span>
-            Click "Join Session" to connect to the remote desktop
+            Click "Join Session" to connect to the remote screen
           </li>
           <li className="flex items-start">
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/10 text-primary-500 text-xs font-medium mr-3 mt-0.5">

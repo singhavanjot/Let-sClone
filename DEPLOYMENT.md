@@ -1,6 +1,6 @@
-# 🚀 Deployment Guide - Remote Desktop Clone
+# 🚀 Deployment Guide - Let'sClone
 
-This guide will help you deploy the Remote Desktop application using:
+This guide will help you deploy the Let'sClone application using:
 - **MongoDB Atlas** - Database
 - **Render** - Backend (Node.js + Socket.IO)
 - **Vercel** - Frontend (React)
@@ -32,7 +32,7 @@ This guide will help you deploy the Remote Desktop application using:
 1. Go to **"Database Access"** in the left sidebar
 2. Click **"Add New Database User"**
 3. Choose **"Password"** authentication
-4. Enter a username (e.g., `remotedesktop`)
+4. Enter a username (e.g., `letsclone`)
 5. Click **"Autogenerate Secure Password"** and **SAVE THIS PASSWORD**
 6. Under "Database User Privileges", select **"Read and write to any database"**
 7. Click **"Add User"**
@@ -55,7 +55,7 @@ This guide will help you deploy the Remote Desktop application using:
 5. Replace `<password>` with your database user password
 6. Add database name before the `?`:
    ```
-   mongodb+srv://remotedesktop:YOUR_PASSWORD@cluster0.xxxxx.mongodb.net/remote-desktop?retryWrites=true&w=majority
+   mongodb+srv://letsclone:YOUR_PASSWORD@cluster0.xxxxx.mongodb.net/letsclone?retryWrites=true&w=majority
    ```
 
 **💾 Save this connection string - you'll need it for Render!**
@@ -72,12 +72,12 @@ This guide will help you deploy the Remote Desktop application using:
 ### 2.2 Create Web Service
 1. From Dashboard, click **"New +"** → **"Web Service"**
 2. Connect your GitHub repository
-3. Select the `remote-desktop` repository
+3. Select the `letsclone` repository
 4. Configure the service:
 
 | Setting | Value |
 |---------|-------|
-| **Name** | `remote-desktop-backend` |
+| **Name** | `letsclone-backend` |
 | **Region** | Choose closest to your users |
 | **Branch** | `main` |
 | **Root Directory** | `backend` |
@@ -103,7 +103,7 @@ Click **"Advanced"** → **"Add Environment Variable"** and add these:
 ### 2.4 Deploy
 1. Click **"Create Web Service"**
 2. Wait for deployment (takes 2-5 minutes)
-3. Once deployed, copy your Render URL (e.g., `https://remote-desktop-backend.onrender.com`)
+3. Once deployed, copy your Render URL (e.g., `https://letsclone-backend.onrender.com`)
 
 **💾 Save your Render backend URL!**
 
@@ -118,12 +118,12 @@ Click **"Advanced"** → **"Add Environment Variable"** and add these:
 
 ### 3.2 Import Project
 1. From Dashboard, click **"Add New..."** → **"Project"**
-2. Import your GitHub repository (`remote-desktop`)
+2. Import your GitHub repository (`letsclone`)
 3. Configure the project:
 
 | Setting | Value |
 |---------|-------|
-| **Project Name** | `remote-desktop` (or your choice) |
+| **Project Name** | `letsclone` (or your choice) |
 | **Framework Preset** | `Vite` |
 | **Root Directory** | Click "Edit" → Select `frontend` |
 | **Build Command** | `npm run build` |
@@ -142,7 +142,7 @@ Replace `YOUR-RENDER-URL` with your actual Render backend URL from Step 2.4.
 ### 3.4 Deploy
 1. Click **"Deploy"**
 2. Wait for deployment (takes 1-2 minutes)
-3. Once deployed, copy your Vercel URL (e.g., `https://remote-desktop.vercel.app`)
+3. Once deployed, copy your Vercel URL (e.g., `https://letsclone.vercel.app`)
 
 ---
 
@@ -151,9 +151,9 @@ Replace `YOUR-RENDER-URL` with your actual Render backend URL from Step 2.4.
 **IMPORTANT:** Now that you have your Vercel URL, update Render's CORS setting:
 
 1. Go to your Render dashboard
-2. Click on your `remote-desktop-backend` service
+2. Click on your `letsclone-backend` service
 3. Go to **"Environment"** tab
-4. Update `CORS_ORIGIN` to your Vercel URL (e.g., `https://remote-desktop.vercel.app`)
+4. Update `CORS_ORIGIN` to your Vercel URL (e.g., `https://letsclone.vercel.app`)
 5. Click **"Save Changes"**
 6. Render will automatically redeploy
 
@@ -203,7 +203,7 @@ curl https://YOUR-RENDER-URL.onrender.com/api/health
 ### Backend (Render)
 ```
 NODE_ENV=production
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/remote-desktop?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/letsclone?retryWrites=true&w=majority
 JWT_SECRET=your-generated-secret
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
@@ -243,7 +243,7 @@ VITE_SOCKET_URL=https://your-backend.onrender.com
 
 ## 🎉 Done!
 
-Your Remote Desktop application should now be live at your Vercel URL!
+Your Let'sClone application should now be live at your Vercel URL!
 
 **Your URLs:**
 - Frontend: `https://your-project.vercel.app`

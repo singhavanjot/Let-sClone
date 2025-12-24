@@ -84,7 +84,7 @@ function Dashboard() {
           Welcome back, {user?.name || 'User'}!
         </h1>
         <p className="text-gray-400 mt-1">
-          Here's an overview of your remote desktop activity
+          Here's an overview of your Let'sClone activity
         </p>
       </div>
 
@@ -118,7 +118,7 @@ function Dashboard() {
             </div>
             <div className="ml-4">
               <h3 className="font-medium text-white">Join a Session</h3>
-              <p className="text-sm text-gray-400">Connect to a remote desktop</p>
+              <p className="text-sm text-gray-400">Connect to a remote screen</p>
             </div>
           </div>
           <FiArrowRight className="w-5 h-5 text-gray-400" />

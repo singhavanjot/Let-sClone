@@ -3,7 +3,7 @@
 
 services:
   - type: web
-    name: remote-desktop-backend
+    name: letsclone-backend
     env: node
     region: oregon
     plan: free

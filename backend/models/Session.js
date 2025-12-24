@@ -1,6 +1,6 @@
 /**
  * Session Model
- * MongoDB schema for remote desktop sessions
+ * MongoDB schema for Let'sClone sessions
  */
 
 const mongoose = require('mongoose');

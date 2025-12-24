@@ -14,8 +14,8 @@ module.exports = {
   refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
   
   // Token issuer
-  issuer: 'remote-desktop-app',
+  issuer: 'letsclone-app',
   
   // Token audience
-  audience: 'remote-desktop-users'
+  audience: 'letsclone-users'
 };

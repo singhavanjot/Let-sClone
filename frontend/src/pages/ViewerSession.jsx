@@ -1,6 +1,6 @@
 /**
  * Viewer Session Page
- * View and control a remote desktop
+ * View and control a remote screen
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';

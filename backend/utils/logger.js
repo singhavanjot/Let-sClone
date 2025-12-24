@@ -19,7 +19,7 @@ const logFormat = winston.format.combine(
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: logFormat,
-  defaultMeta: { service: 'remote-desktop-backend' },
+  defaultMeta: { service: 'letsclone-backend' },
   transports: [
     // Console transport for development
     new winston.transports.Console({

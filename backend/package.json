@@ -1,7 +1,7 @@
 {
-  "name": "remote-desktop-backend",
+  "name": "letsclone-backend",
   "version": "1.0.0",
-  "description": "Backend signaling server for remote desktop application",
+  "description": "Backend signaling server for Let'sClone application",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,7 +9,7 @@
     "test": "jest"
   },
   "keywords": [
-    "remote-desktop",
+    "letsclone",
     "webrtc",
     "signaling",
     "socket.io"

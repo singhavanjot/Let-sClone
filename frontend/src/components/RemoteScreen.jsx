@@ -1,6 +1,6 @@
 /**
  * Remote Screen Component
- * Displays the remote desktop video stream
+ * Displays the remote video stream
  */
 
 import { useRef, useEffect, useState } from 'react';

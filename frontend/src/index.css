@@ -51,7 +51,7 @@ body {
   color: white;
 }
 
-/* Video/Canvas container for remote desktop */
+/* Video/Canvas container for remote screen */
 .remote-screen {
   position: relative;
   background: #000;

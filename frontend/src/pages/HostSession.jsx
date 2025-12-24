@@ -1,6 +1,6 @@
 /**
  * Host Session Page
- * Start a new remote desktop session as the host
+ * Start a new Let'sClone session as the host
  */
 
 import { useState, useEffect, useCallback } from 'react';

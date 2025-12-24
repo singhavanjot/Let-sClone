@@ -1,12 +1,12 @@
-# Let'sClone(Remote Desktop clone)
+# Let'sClone
 
-A full-stack remote desktop web application that allows one user (Host) to share their screen and another user (Viewer) to view and remotely control the host's system in real-time.
+A full-stack screen sharing web application that allows one user (Host) to share their screen and another user (Viewer) to view and remotely control the host's system in real-time.
 
 ## 🚀 Features
 
 - **Secure Authentication** - JWT-based authentication with access and refresh tokens
 - **Real-time Screen Sharing** - WebRTC-powered low-latency video streaming
-- **Remote Control** - Mouse and keyboard control over the remote desktop
+- **Remote Control** - Mouse and keyboard control over the remote screen
 - **Device Management** - Register and manage multiple devices
 - **Session Management** - Create, join, and track remote sessions
 - **Responsive UI** - Modern, dark-themed interface built with Tailwind CSS
@@ -34,7 +34,7 @@ A full-stack remote desktop web application that allows one user (Host) to share
 ## 📁 Project Structure
 
 ```
-remote-desktop/
+letsclone/
 ├── backend/
 │   ├── config/
 │   │   ├── database.js      # MongoDB connection
@@ -120,8 +120,8 @@ remote-desktop/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/remote-desktop-clone.git
-   cd remote-desktop-clone
+   git clone https://github.com/yourusername/letsclone.git
+   cd letsclone
    ```
 
 2. **Backend Setup**
@@ -159,7 +159,7 @@ NODE_ENV=development
 PORT=5000
 
 # MongoDB
-MONGODB_URI=mongodb://localhost:27017/remote-desktop
+MONGODB_URI=mongodb://localhost:27017/letsclone
 
 # JWT
 JWT_SECRET=your-super-secret-jwt-key-min-32-characters

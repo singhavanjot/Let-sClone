@@ -1,6 +1,6 @@
 /**
  * Session Routes
- * API endpoints for remote desktop session management
+ * API endpoints for Let'sClone session management
  */
 
 const express = require('express');

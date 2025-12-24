@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 
 const connectDB = async () => {
   try {
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/remote-desktop';
+    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/letsclone';
     
     const options = {
       maxPoolSize: 10,

@@ -1,5 +1,5 @@
 /**
- * Remote Desktop Backend Server
+ * Let'sClone Backend Server
  * Main entry point for the Express + Socket.IO signaling server
  */
 

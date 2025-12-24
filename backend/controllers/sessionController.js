@@ -1,6 +1,6 @@
 /**
  * Session Controller
- * Handles remote desktop session creation and management
+ * Handles Let'sClone session creation and management
  */
 
 const { Session, Device, User } = require('../models');
@@ -8,7 +8,7 @@ const { generateSessionCode, formatDuration } = require('../utils/helpers');
 const logger = require('../utils/logger');
 
 /**
- * Create a new remote desktop session
+ * Create a new Let'sClone session
  * POST /api/sessions
  */
 const createSession = async (req, res) => {
