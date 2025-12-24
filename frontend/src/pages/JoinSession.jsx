@@ -1,80 +1,104 @@
 /**
- * Join Session Page
- * Enter a session code to join as a viewer
+ * Join Session Page - Modern Clean Design
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiLink, FiArrowRight, FiClock } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  FiLink, 
+  FiArrowRight, 
+  FiClock,
+  FiMonitor
+} from 'react-icons/fi';
 import toast from 'react-hot-toast';
-
-import { Card, Button, Input, LoadingSpinner } from '../components';
+import { LoadingSpinner } from '../components';
 import { useDeviceStore, useSessionStore } from '../store';
 
 function JoinSession() {
   const [sessionCode, setSessionCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const inputRefs = useRef([]);
   
   const navigate = useNavigate();
-  
-  const { currentDevice, getOrCreateDevice, fetchDevices } = useDeviceStore();
-  const { joinSession, isLoading, activeSessions, fetchActiveSessions } = useSessionStore();
+  const { currentDevice, getOrCreateDevice } = useDeviceStore();
+  const { joinSession, activeSessions, fetchActiveSessions } = useSessionStore();
 
-  // Load device and active sessions
   useEffect(() => {
-    const loadData = async () => {
-      await fetchDevices();
-      await getOrCreateDevice();
-      await fetchActiveSessions();
-    };
-    loadData();
-  }, [fetchDevices, getOrCreateDevice, fetchActiveSessions]);
+    if (!currentDevice) {
+      getOrCreateDevice();
+    }
+  }, [currentDevice, getOrCreateDevice]);
 
-  // Format session code input
-  const handleCodeChange = (e) => {
-    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (value.length <= 6) {
-      setSessionCode(value);
-      setError('');
+  useEffect(() => {
+    fetchActiveSessions();
+  }, [fetchActiveSessions]);
+
+  const handleInputChange = (index, value) => {
+    const char = value.toUpperCase().slice(-1);
+    if (!/^[A-Z0-9]$/.test(char) && char !== '') return;
+
+    const newCode = sessionCode.split('');
+    newCode[index] = char;
+    const updatedCode = newCode.join('').slice(0, 6);
+    setSessionCode(updatedCode);
+    setError('');
+
+    if (char && index < 5) {
+      inputRefs.current[index + 1]?.focus();
     }
   };
 
-  // Handle paste
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !sessionCode[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'Enter' && sessionCode.length === 6) {
+      handleSubmit(e);
+    }
+  };
+
   const handlePaste = (e) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (pasted.length <= 6) {
-      setSessionCode(pasted);
-      setError('');
+    const pastedData = e.clipboardData.getData('text').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    setSessionCode(pastedData);
+    if (pastedData.length === 6) {
+      inputRefs.current[5]?.focus();
     }
   };
 
-  // Join session
-  const handleJoin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (sessionCode.length !== 6) {
-      setError('Session code must be 6 characters');
+      setError('Please enter a valid 6-character code');
       return;
     }
 
     if (!currentDevice) {
-      toast.error('No device registered. Please wait...');
+      setError('Device not registered. Please wait...');
       return;
     }
 
-    const result = await joinSession(sessionCode, currentDevice.deviceId);
-    
-    if (result.success) {
-      toast.success('Joining session...');
-      navigate(`/session/${sessionCode}`);
-    } else {
-      setError(result.error);
-      toast.error(result.error);
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const session = await joinSession(sessionCode, currentDevice.id);
+      
+      if (session) {
+        toast.success('Connected successfully!');
+        navigate(`/session/${sessionCode}`);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to join session');
+      toast.error('Connection failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Quick join from active session
   const handleQuickJoin = (code) => {
     setSessionCode(code);
   };
@@ -82,124 +106,153 @@ function JoinSession() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Join Session</h1>
-        <p className="text-gray-400 mt-1">
-          Enter a session code to view a remote screen
-        </p>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center"
+      >
+        <h1 className="text-2xl font-bold text-white mb-2">Join Session</h1>
+        <p className="text-gray-400">Enter the session code to connect to a remote desktop</p>
+      </motion.div>
 
-      {/* Join Form */}
-      <Card className="py-8">
-        <form onSubmit={handleJoin} className="max-w-sm mx-auto text-center">
-          <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-2xl bg-green-500/10 mb-6">
-            <FiLink className="w-8 h-8 text-green-500" />
-          </div>
-
-          <h2 className="text-lg font-medium text-white mb-6">
-            Enter Session Code
-          </h2>
-
-          {/* Session code input */}
-          <div className="mb-6">
-            <input
-              type="text"
-              value={sessionCode}
-              onChange={handleCodeChange}
-              onPaste={handlePaste}
-              placeholder="XXXXXX"
-              maxLength={6}
-              className={`
-                w-full text-center text-3xl font-bold tracking-[0.3em]
-                py-4 px-6 bg-dark-700 border rounded-xl
-                text-white placeholder-gray-600
-                focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                ${error ? 'border-red-500' : 'border-dark-600'}
-              `}
-              autoFocus
-            />
-            {error && (
-              <p className="mt-2 text-sm text-red-500">{error}</p>
-            )}
-          </div>
-
-          <Button
-            type="submit"
-            size="lg"
-            fullWidth
-            icon={FiArrowRight}
-            loading={isLoading}
-            disabled={sessionCode.length !== 6 || !currentDevice}
-          >
-            Join Session
-          </Button>
-
-          {!currentDevice && (
-            <p className="text-sm text-gray-500 mt-4">
-              Registering your device...
-            </p>
-          )}
-        </form>
-      </Card>
-
-      {/* Active sessions you can rejoin */}
-      {activeSessions.length > 0 && (
-        <Card>
-          <h3 className="font-medium text-white mb-4 flex items-center">
-            <FiClock className="w-5 h-5 mr-2 text-primary-500" />
-            Your Active Sessions
-          </h3>
-          
-          <div className="space-y-2">
-            {activeSessions.filter(s => !s.isHost).map((session) => (
-              <div
-                key={session.id}
-                className="flex items-center justify-between p-3 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors cursor-pointer"
-                onClick={() => handleQuickJoin(session.sessionCode)}
-              >
-                <div className="flex items-center">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mr-3 pulse-online" />
-                  <span className="font-mono text-white">{session.sessionCode}</span>
-                </div>
-                <Button variant="ghost" size="sm">
-                  Rejoin
-                </Button>
+      {/* Code Input Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <div className="glass-card p-8">
+          <form onSubmit={handleSubmit}>
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-500/10 border border-indigo-500/30 rounded-full mb-4">
+                <FiLink className="w-4 h-4 text-indigo-400" />
+                <span className="text-indigo-400 text-sm font-medium">Enter Session Code</span>
               </div>
-            ))}
-          </div>
-        </Card>
-      )}
+            </div>
+
+            {/* 6-digit input */}
+            <div className="flex justify-center gap-3 mb-6" onPaste={handlePaste}>
+              {[0, 1, 2, 3, 4, 5].map((index) => (
+                <motion.input
+                  key={index}
+                  ref={(el) => (inputRefs.current[index] = el)}
+                  type="text"
+                  maxLength={1}
+                  value={sessionCode[index] || ''}
+                  onChange={(e) => handleInputChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: index * 0.05, type: 'spring' }}
+                  className={`
+                    w-12 h-14 md:w-14 md:h-16 text-center text-2xl font-bold font-mono
+                    bg-[#0f0f23] border-2 rounded-xl
+                    text-white placeholder-gray-700
+                    focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500
+                    transition-all duration-200
+                    ${error ? 'border-red-500' : sessionCode[index] ? 'border-indigo-500' : 'border-gray-700'}
+                  `}
+                  autoFocus={index === 0}
+                />
+              ))}
+            </div>
+
+            {error && (
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center text-red-400 text-sm mb-4"
+              >
+                {error}
+              </motion.p>
+            )}
+
+            <motion.button
+              type="submit"
+              disabled={isLoading || sessionCode.length !== 6 || !currentDevice}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn-primary w-full flex items-center justify-center space-x-2 disabled:opacity-50"
+            >
+              {isLoading ? (
+                <div className="loading-spinner w-5 h-5" />
+              ) : (
+                <>
+                  <span>Join Session</span>
+                  <FiArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </motion.button>
+
+            {!currentDevice && (
+              <p className="text-center text-gray-500 text-sm mt-4 flex items-center justify-center">
+                <LoadingSpinner size="sm" />
+                <span className="ml-2">Registering your device...</span>
+              </p>
+            )}
+          </form>
+        </div>
+      </motion.div>
+
+      {/* Active Sessions */}
+      <AnimatePresence>
+        {activeSessions.filter(s => !s.isHost).length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ delay: 0.2 }}
+            className="glass-card p-6"
+          >
+            <h3 className="font-semibold text-white mb-4 flex items-center">
+              <FiClock className="w-5 h-5 mr-2 text-indigo-400" />
+              Your Active Sessions
+            </h3>
+            
+            <div className="space-y-2">
+              {activeSessions.filter(s => !s.isHost).map((session) => (
+                <motion.div
+                  key={session.id}
+                  whileHover={{ scale: 1.01 }}
+                  onClick={() => handleQuickJoin(session.sessionCode)}
+                  className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-all"
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                    <span className="font-mono text-white tracking-wider">{session.sessionCode}</span>
+                  </div>
+                  <span className="text-indigo-400 text-sm font-medium">Rejoin →</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Instructions */}
-      <Card>
-        <h3 className="font-medium text-white mb-4">How to join</h3>
-        <ol className="space-y-3 text-gray-400 text-sm">
-          <li className="flex items-start">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/10 text-primary-500 text-xs font-medium mr-3 mt-0.5">
-              1
-            </span>
-            Get a 6-character session code from the person sharing their screen
-          </li>
-          <li className="flex items-start">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/10 text-primary-500 text-xs font-medium mr-3 mt-0.5">
-              2
-            </span>
-            Enter the code in the field above
-          </li>
-          <li className="flex items-start">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/10 text-primary-500 text-xs font-medium mr-3 mt-0.5">
-              3
-            </span>
-            Click "Join Session" to connect to the remote screen
-          </li>
-          <li className="flex items-start">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/10 text-primary-500 text-xs font-medium mr-3 mt-0.5">
-              4
-            </span>
-            You can view and control the remote screen (if allowed by host)
-          </li>
-        </ol>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="glass-card p-6"
+      >
+        <h3 className="font-semibold text-white mb-4">How to join</h3>
+        <div className="space-y-3">
+          {[
+            'Get a 6-character session code from the person sharing their screen',
+            'Enter the code in the field above',
+            'Click "Join Session" to connect',
+            'You can view and control the remote screen (if allowed)',
+          ].map((step, i) => (
+            <div key={i} className="flex items-start space-x-3">
+              <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-indigo-400 text-xs font-bold">{i + 1}</span>
+              </div>
+              <span className="text-gray-300 text-sm">{step}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }

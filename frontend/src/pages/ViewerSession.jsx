@@ -1,124 +1,326 @@
 /**
- * Viewer Session Page
- * View and control a remote screen
+ * Viewer Session Page - Modern Clean Design
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
-  FiX, 
-  FiMaximize, 
-  FiSettings,
+  FiMonitor, 
+  FiMaximize2,
+  FiMinimize2,
+  FiX,
   FiMousePointer,
+  FiWifi,
+  FiWifiOff,
+  FiActivity,
+  FiRefreshCw,
+  FiLock,
+  FiUnlock,
   FiEye
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { LoadingSpinner } from '../components';
+import { useWebRTC, useSocket } from '../hooks';
+import { useDeviceStore, useSessionStore } from '../store';
 
-import { 
-  Card, 
-  Button, 
-  ConnectionStatus, 
-  RemoteScreen,
-  LoadingSpinner 
-} from '../components';
-import { useWebRTC, useSocket, useRemoteControl } from '../hooks';
-import { useSessionStore, useDeviceStore } from '../store';
+// Stats Panel
+const StatsPanel = ({ stats }) => (
+  <div className="glass-card p-4">
+    <h3 className="text-sm font-medium text-gray-400 mb-3">Connection Stats</h3>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-gray-500 text-sm">Latency</span>
+        <span className="text-white font-mono text-sm">{stats.latency || '--'}ms</span>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-gray-500 text-sm">Quality</span>
+        <span className="text-emerald-400 font-mono text-sm">{stats.quality || 'Good'}</span>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-gray-500 text-sm">Resolution</span>
+        <span className="text-white font-mono text-sm">{stats.resolution || '1920x1080'}</span>
+      </div>
+    </div>
+  </div>
+);
+
+// Interactive Remote Screen Component
+const InteractiveRemoteScreen = ({ 
+  stream, 
+  onMouseEvent, 
+  onKeyEvent, 
+  controlEnabled,
+  hostAllowsControl 
+}) => {
+  const videoRef = useRef(null);
+  const containerRef = useRef(null);
+  const [videoSize, setVideoSize] = useState({ width: 1920, height: 1080 });
+
+  // Attach stream to video
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  // Get relative coordinates
+  const getRelativeCoords = useCallback((e) => {
+    if (!containerRef.current || !videoRef.current) return null;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Convert to relative coordinates (0-1)
+    const relX = x / rect.width;
+    const relY = y / rect.height;
+    
+    // Convert to video coordinates
+    const videoX = Math.round(relX * videoSize.width);
+    const videoY = Math.round(relY * videoSize.height);
+    
+    return { x: videoX, y: videoY, relX, relY };
+  }, [videoSize]);
+
+  // Mouse handlers
+  const handleMouseMove = useCallback((e) => {
+    if (!controlEnabled || !hostAllowsControl) return;
+    const coords = getRelativeCoords(e);
+    if (coords) {
+      onMouseEvent?.({ type: 'mousemove', ...coords, timestamp: Date.now() });
+    }
+  }, [controlEnabled, hostAllowsControl, getRelativeCoords, onMouseEvent]);
+
+  const handleMouseDown = useCallback((e) => {
+    if (!controlEnabled || !hostAllowsControl) return;
+    e.preventDefault();
+    const coords = getRelativeCoords(e);
+    if (coords) {
+      onMouseEvent?.({ type: 'mousedown', ...coords, button: e.button, timestamp: Date.now() });
+    }
+  }, [controlEnabled, hostAllowsControl, getRelativeCoords, onMouseEvent]);
+
+  const handleMouseUp = useCallback((e) => {
+    if (!controlEnabled || !hostAllowsControl) return;
+    e.preventDefault();
+    const coords = getRelativeCoords(e);
+    if (coords) {
+      onMouseEvent?.({ type: 'mouseup', ...coords, button: e.button, timestamp: Date.now() });
+    }
+  }, [controlEnabled, hostAllowsControl, getRelativeCoords, onMouseEvent]);
+
+  const handleClick = useCallback((e) => {
+    if (!controlEnabled || !hostAllowsControl) return;
+    e.preventDefault();
+    const coords = getRelativeCoords(e);
+    if (coords) {
+      onMouseEvent?.({ type: 'click', ...coords, button: e.button, timestamp: Date.now() });
+    }
+  }, [controlEnabled, hostAllowsControl, getRelativeCoords, onMouseEvent]);
+
+  const handleDoubleClick = useCallback((e) => {
+    if (!controlEnabled || !hostAllowsControl) return;
+    e.preventDefault();
+    const coords = getRelativeCoords(e);
+    if (coords) {
+      onMouseEvent?.({ type: 'dblclick', ...coords, button: e.button, timestamp: Date.now() });
+    }
+  }, [controlEnabled, hostAllowsControl, getRelativeCoords, onMouseEvent]);
+
+  const handleContextMenu = useCallback((e) => {
+    if (!controlEnabled || !hostAllowsControl) return;
+    e.preventDefault();
+    const coords = getRelativeCoords(e);
+    if (coords) {
+      onMouseEvent?.({ type: 'contextmenu', ...coords, timestamp: Date.now() });
+    }
+  }, [controlEnabled, hostAllowsControl, getRelativeCoords, onMouseEvent]);
+
+  const handleWheel = useCallback((e) => {
+    if (!controlEnabled || !hostAllowsControl) return;
+    e.preventDefault();
+    const coords = getRelativeCoords(e);
+    if (coords) {
+      onMouseEvent?.({ 
+        type: 'scroll', 
+        ...coords, 
+        deltaX: e.deltaX, 
+        deltaY: e.deltaY, 
+        timestamp: Date.now() 
+      });
+    }
+  }, [controlEnabled, hostAllowsControl, getRelativeCoords, onMouseEvent]);
+
+  // Keyboard handlers
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!controlEnabled || !hostAllowsControl) return;
+      if (document.activeElement?.tagName === 'INPUT' || 
+          document.activeElement?.tagName === 'TEXTAREA') return;
+      
+      e.preventDefault();
+      onKeyEvent?.({
+        type: 'keydown',
+        key: e.key,
+        code: e.code,
+        keyCode: e.keyCode,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey,
+        timestamp: Date.now()
+      });
+    };
+
+    const handleKeyUp = (e) => {
+      if (!controlEnabled || !hostAllowsControl) return;
+      if (document.activeElement?.tagName === 'INPUT' || 
+          document.activeElement?.tagName === 'TEXTAREA') return;
+      
+      e.preventDefault();
+      onKeyEvent?.({
+        type: 'keyup',
+        key: e.key,
+        code: e.code,
+        keyCode: e.keyCode,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey,
+        timestamp: Date.now()
+      });
+    };
+
+    if (controlEnabled && hostAllowsControl) {
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keyup', handleKeyUp);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [controlEnabled, hostAllowsControl, onKeyEvent]);
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setVideoSize({
+        width: videoRef.current.videoWidth || 1920,
+        height: videoRef.current.videoHeight || 1080
+      });
+    }
+  };
+
+  const isInteractive = controlEnabled && hostAllowsControl;
+
+  return (
+    <div 
+      ref={containerRef}
+      className="relative w-full h-full bg-black rounded-lg overflow-hidden"
+      style={{ cursor: isInteractive ? 'none' : 'default' }}
+      tabIndex={0}
+      onMouseMove={handleMouseMove}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={handleContextMenu}
+      onWheel={handleWheel}
+    >
+      {stream ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          onLoadedMetadata={handleLoadedMetadata}
+          className="w-full h-full object-contain"
+        />
+      ) : (
+        <div className="flex items-center justify-center h-full min-h-[400px]">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-800 flex items-center justify-center">
+              <FiMonitor className="w-8 h-8 text-gray-500 animate-pulse" />
+            </div>
+            <p className="text-gray-400">Waiting for screen share...</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 function ViewerSession() {
   const { sessionCode } = useParams();
   const navigate = useNavigate();
   
-  const [controlMode, setControlMode] = useState('full'); // full, view-only
-  const [showSettings, setShowSettings] = useState(false);
-  const containerRef = useRef(null);
-
-  const { currentDevice } = useDeviceStore();
-  const { currentSession, endSession, getSession } = useSessionStore();
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [controlEnabled, setControlEnabled] = useState(true);
+  const [hostAllowsControl, setHostAllowsControl] = useState(true); // Host's control mode
+  const [isConnecting, setIsConnecting] = useState(true);
+  const [stats, setStats] = useState({});
+  
+  const { currentDevice, getOrCreateDevice } = useDeviceStore();
+  const { leaveSession } = useSessionStore();
   const { isConnected: socketConnected, registerDevice, on, off } = useSocket();
   
   const {
     connectionState,
     remoteStream,
     error: webrtcError,
-    stats,
     startViewing,
-    sendControlEvent,
-    endConnection
+    endConnection,
+    sendControlEvent
   } = useWebRTC(false);
 
-  const {
-    isEnabled: controlEnabled,
-    initialize: initializeControl,
-    setEnabled: setControlEnabled,
-    updateVideoSize
-  } = useRemoteControl();
+  // Initialize device
+  useEffect(() => {
+    if (!currentDevice) {
+      getOrCreateDevice();
+    }
+  }, [currentDevice, getOrCreateDevice]);
 
   // Register device with socket
   useEffect(() => {
     if (socketConnected && currentDevice) {
-      registerDevice(currentDevice.deviceId);
+      registerDevice(currentDevice.id);
     }
   }, [socketConnected, currentDevice, registerDevice]);
 
-  // Start viewing when component mounts
+  // Listen for control mode changes from host
   useEffect(() => {
-    const initSession = async () => {
-      const success = await startViewing(sessionCode);
-      if (!success) {
+    const handleControlModeChange = ({ controlMode }) => {
+      const allowed = controlMode === 'full-control';
+      setHostAllowsControl(allowed);
+      if (!allowed) {
+        toast('Host switched to view-only mode', { icon: '👁️' });
+      } else {
+        toast.success('Host enabled full control');
+      }
+    };
+
+    on('control-mode-change', handleControlModeChange);
+    return () => off('control-mode-change', handleControlModeChange);
+  }, [on, off]);
+
+  // Connect to session
+  useEffect(() => {
+    const connectToSession = async () => {
+      if (!sessionCode || !currentDevice || !socketConnected) return;
+      
+      try {
+        await startViewing(sessionCode);
+        setIsConnecting(false);
+      } catch (error) {
+        console.error('Failed to connect:', error);
         toast.error('Failed to connect to session');
+        navigate('/join');
       }
     };
 
-    if (sessionCode && socketConnected) {
-      initSession();
-    }
-  }, [sessionCode, socketConnected, startViewing]);
-
-  // Initialize remote control when container is ready
-  const handleContainerRef = useCallback((element) => {
-    if (element) {
-      containerRef.current = element;
-      initializeControl(element, (event) => {
-        if (controlMode === 'full') {
-          sendControlEvent(event);
-        }
-      });
-    }
-  }, [initializeControl, sendControlEvent, controlMode]);
-
-  // Update video size when stream changes
-  useEffect(() => {
-    if (remoteStream) {
-      const videoTrack = remoteStream.getVideoTracks()[0];
-      if (videoTrack) {
-        const settings = videoTrack.getSettings();
-        updateVideoSize(settings.width || 1920, settings.height || 1080);
-      }
-    }
-  }, [remoteStream, updateVideoSize]);
-
-  // Listen for session events
-  useEffect(() => {
-    const handleSessionEnded = () => {
-      toast('Session ended by host');
-      navigate('/dashboard');
-    };
-
-    const handleHostDisconnected = ({ isHost }) => {
-      if (isHost) {
-        toast.error('Host disconnected');
-        navigate('/dashboard');
-      }
-    };
-
-    on('session:ended', handleSessionEnded);
-    on('peer:disconnected', handleHostDisconnected);
-
-    return () => {
-      off('session:ended', handleSessionEnded);
-      off('peer:disconnected', handleHostDisconnected);
-    };
-  }, [on, off, navigate]);
+    connectToSession();
+  }, [sessionCode, currentDevice, socketConnected, startViewing, navigate]);
 
   // Handle WebRTC errors
   useEffect(() => {
@@ -127,20 +329,64 @@ function ViewerSession() {
     }
   }, [webrtcError]);
 
-  // Handle disconnect
-  const handleDisconnect = async () => {
-    await endConnection();
-    navigate('/dashboard');
-    toast.success('Disconnected from session');
+  // Listen for host disconnect
+  useEffect(() => {
+    const handleHostDisconnect = () => {
+      toast.error('Host ended the session');
+      navigate('/join');
+    };
+
+    on('host-disconnected', handleHostDisconnect);
+    return () => off('host-disconnected', handleHostDisconnect);
+  }, [on, off, navigate]);
+
+  // Disconnect handler
+  const handleDisconnect = useCallback(async () => {
+    try {
+      await endConnection();
+      if (sessionCode) {
+        await leaveSession(sessionCode);
+      }
+      toast.success('Disconnected from session');
+      navigate('/join');
+    } catch (error) {
+      console.error('Disconnect error:', error);
+      navigate('/join');
+    }
+  }, [endConnection, leaveSession, sessionCode, navigate]);
+
+  // Fullscreen toggle
+  const toggleFullscreen = () => {
+    const elem = document.documentElement;
+    
+    if (!isFullscreen) {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+    setIsFullscreen(!isFullscreen);
   };
 
-  // Toggle control mode
-  const toggleControlMode = () => {
-    const newMode = controlMode === 'full' ? 'view-only' : 'full';
-    setControlMode(newMode);
-    setControlEnabled(newMode === 'full');
-    toast.success(newMode === 'full' ? 'Full control enabled' : 'View-only mode');
-  };
+  // Control event handlers
+  const handleMouseEvent = useCallback((event) => {
+    if (!controlEnabled || !hostAllowsControl) return;
+    sendControlEvent({
+      type: 'mouse',
+      ...event
+    });
+  }, [controlEnabled, hostAllowsControl, sendControlEvent]);
+
+  const handleKeyEvent = useCallback((event) => {
+    if (!controlEnabled || !hostAllowsControl) return;
+    sendControlEvent({
+      type: 'keyboard',
+      ...event
+    });
+  }, [controlEnabled, hostAllowsControl, sendControlEvent]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -150,126 +396,243 @@ function ViewerSession() {
   }, [endConnection]);
 
   // Loading state
-  if (connectionState === 'connecting' && !remoteStream) {
+  if (isConnecting || connectionState === 'connecting') {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="text-center py-12 px-16">
-          <LoadingSpinner size="lg" className="mb-6" />
-          <h2 className="text-xl font-semibold text-white mb-2">
-            Connecting to Session
-          </h2>
-          <p className="text-gray-400">
-            Session Code: <span className="font-mono">{sessionCode}</span>
-          </p>
-          <ConnectionStatus state={connectionState} className="mt-4" />
-        </Card>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            className="w-16 h-16 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 mx-auto mb-6"
+          />
+          <h2 className="text-xl font-semibold text-white mb-2">Connecting...</h2>
+          <p className="text-gray-400">Establishing secure connection to session</p>
+          <p className="text-indigo-400 font-mono mt-4">{sessionCode}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Connection failed
+  if (connectionState === 'failed' || connectionState === 'disconnected') {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center glass-card p-8 max-w-md">
+          <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+            <FiWifiOff className="w-8 h-8 text-red-400" />
+          </div>
+          <h2 className="text-xl font-semibold text-white mb-2">Connection Lost</h2>
+          <p className="text-gray-400 mb-6">The connection to the remote session was lost.</p>
+          <div className="flex justify-center space-x-4">
+            <motion.button
+              onClick={() => window.location.reload()}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn-secondary inline-flex items-center space-x-2"
+            >
+              <FiRefreshCw className="w-4 h-4" />
+              <span>Retry</span>
+            </motion.button>
+            <motion.button
+              onClick={() => navigate('/join')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn-primary"
+            >
+              Back to Join
+            </motion.button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col">
-      {/* Header Bar */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-bold text-white">
-            Session: <span className="font-mono text-primary-500">{sessionCode}</span>
+    <div className="space-y-4 p-4">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-white flex items-center">
+            <FiMonitor className="w-5 h-5 mr-2 text-indigo-400" />
+            Remote Session
           </h1>
-          <ConnectionStatus state={connectionState} />
+          <p className="text-gray-400 mt-1">
+            Session Code: <span className="font-mono text-indigo-400">{sessionCode}</span>
+          </p>
         </div>
-
-        <div className="flex items-center space-x-2">
-          {/* Stats */}
-          {stats && connectionState === 'connected' && (
-            <div className="hidden md:flex items-center space-x-4 text-xs text-gray-400 mr-4">
-              <span>RTT: {Math.round((stats.roundTripTime || 0) * 1000)}ms</span>
-              <span>Received: {formatBytes(stats.bytesReceived)}</span>
-            </div>
-          )}
-
-          {/* Control Mode Toggle */}
-          <Button
-            variant={controlMode === 'full' ? 'primary' : 'secondary'}
-            size="sm"
-            icon={controlMode === 'full' ? FiMousePointer : FiEye}
-            onClick={toggleControlMode}
-          >
-            {controlMode === 'full' ? 'Control' : 'View Only'}
-          </Button>
-
-          {/* Settings */}
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={FiSettings}
-            onClick={() => setShowSettings(!showSettings)}
-          />
-
-          {/* Disconnect */}
-          <Button
-            variant="danger"
-            size="sm"
-            icon={FiX}
-            onClick={handleDisconnect}
-          >
-            Disconnect
-          </Button>
-        </div>
-      </div>
-
-      {/* Remote Screen */}
-      <div className="flex-1 min-h-0">
-        <RemoteScreen
-          stream={remoteStream}
-          onContainerRef={handleContainerRef}
-          showControls={true}
-          className="h-full"
-        />
-      </div>
-
-      {/* Settings Panel */}
-      {showSettings && (
-        <Card className="absolute bottom-20 right-4 w-72 z-10">
-          <h3 className="font-medium text-white mb-4">Session Settings</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="flex items-center justify-between">
-                <span className="text-gray-400 text-sm">Remote Control</span>
-                <button
-                  onClick={toggleControlMode}
-                  className={`
-                    relative inline-flex h-6 w-11 items-center rounded-full
-                    transition-colors duration-200
-                    ${controlMode === 'full' ? 'bg-primary-600' : 'bg-dark-600'}
-                  `}
-                >
-                  <span
-                    className={`
-                      inline-block h-4 w-4 transform rounded-full bg-white
-                      transition-transform duration-200
-                      ${controlMode === 'full' ? 'translate-x-6' : 'translate-x-1'}
-                    `}
-                  />
-                </button>
-              </label>
-            </div>
-
-            {/* Quality setting would go here */}
+        
+        <div className="flex items-center space-x-3">
+          {/* Host Control Mode Badge */}
+          <div className={`badge ${hostAllowsControl ? 'badge-success' : 'badge-warning'}`}>
+            {hostAllowsControl ? (
+              <>
+                <FiUnlock className="w-3 h-3 mr-2" />
+                Control Allowed
+              </>
+            ) : (
+              <>
+                <FiEye className="w-3 h-3 mr-2" />
+                View Only
+              </>
+            )}
           </div>
-        </Card>
-      )}
+          
+          <div className={`badge ${connectionState === 'connected' ? 'badge-success' : 'badge-warning'}`}>
+            {connectionState === 'connected' ? (
+              <>
+                <FiWifi className="w-3 h-3 mr-2" />
+                Connected
+              </>
+            ) : (
+              <>
+                <FiActivity className="w-3 h-3 mr-2 animate-pulse" />
+                Connecting
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="grid lg:grid-cols-4 gap-4">
+        {/* Video Container */}
+        <div className="lg:col-span-3">
+          <div className="glass-card p-4">
+            {/* Video Controls */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                {hostAllowsControl ? (
+                  <motion.button
+                    onClick={() => setControlEnabled(!controlEnabled)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`p-2 rounded-lg transition-all ${
+                      controlEnabled 
+                        ? 'bg-purple-500/20 text-purple-400' 
+                        : 'bg-gray-700/50 text-gray-500'
+                    }`}
+                    title={controlEnabled ? 'Disable Control' : 'Enable Control'}
+                  >
+                    {controlEnabled ? <FiMousePointer className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                  </motion.button>
+                ) : (
+                  <div className="p-2 rounded-lg bg-gray-700/50 text-gray-500">
+                    <FiLock className="w-5 h-5" />
+                  </div>
+                )}
+                <span className="text-sm text-gray-400">
+                  {!hostAllowsControl 
+                    ? 'Host set to View Only' 
+                    : controlEnabled 
+                      ? 'Control Enabled' 
+                      : 'View Only'
+                  }
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <motion.button
+                  onClick={toggleFullscreen}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
+                  title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                >
+                  {isFullscreen ? <FiMinimize2 className="w-5 h-5" /> : <FiMaximize2 className="w-5 h-5" />}
+                </motion.button>
+                
+                <motion.button
+                  onClick={handleDisconnect}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-all"
+                  title="Disconnect"
+                >
+                  <FiX className="w-5 h-5" />
+                </motion.button>
+              </div>
+            </div>
+            
+            {/* Remote Screen */}
+            <div className="screen-preview aspect-video relative">
+              <InteractiveRemoteScreen
+                stream={remoteStream}
+                onMouseEvent={handleMouseEvent}
+                onKeyEvent={handleKeyEvent}
+                controlEnabled={controlEnabled}
+                hostAllowsControl={hostAllowsControl}
+              />
+              
+              {controlEnabled && hostAllowsControl && connectionState === 'connected' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute bottom-4 left-4 flex items-center space-x-2 px-3 py-1.5 bg-purple-500/20 rounded-full border border-purple-500/30"
+                >
+                  <FiMousePointer className="w-3 h-3 text-purple-400" />
+                  <span className="text-purple-400 text-xs font-medium">Control Active</span>
+                </motion.div>
+              )}
+              
+              {!hostAllowsControl && connectionState === 'connected' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute bottom-4 left-4 flex items-center space-x-2 px-3 py-1.5 bg-cyan-500/20 rounded-full border border-cyan-500/30"
+                >
+                  <FiEye className="w-3 h-3 text-cyan-400" />
+                  <span className="text-cyan-400 text-xs font-medium">View Only Mode</span>
+                </motion.div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Side Panel */}
+        <div className="space-y-4">
+          <StatsPanel stats={stats} />
+          
+          {/* Quick Actions */}
+          <div className="glass-card p-4">
+            <h3 className="text-sm font-medium text-gray-400 mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              {hostAllowsControl && (
+                <motion.button
+                  onClick={() => setControlEnabled(!controlEnabled)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full p-3 rounded-xl bg-white/5 hover:bg-white/10 text-left text-gray-300 text-sm flex items-center space-x-3 transition-all"
+                >
+                  {controlEnabled ? <FiEye className="w-4 h-4" /> : <FiMousePointer className="w-4 h-4" />}
+                  <span>{controlEnabled ? 'Switch to View Only' : 'Enable Control'}</span>
+                </motion.button>
+              )}
+              
+              <motion.button
+                onClick={toggleFullscreen}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full p-3 rounded-xl bg-white/5 hover:bg-white/10 text-left text-gray-300 text-sm flex items-center space-x-3 transition-all"
+              >
+                <FiMaximize2 className="w-4 h-4" />
+                <span>Toggle Fullscreen</span>
+              </motion.button>
+              
+              <motion.button
+                onClick={handleDisconnect}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-left text-red-400 text-sm flex items-center space-x-3 transition-all"
+              >
+                <FiX className="w-4 h-4" />
+                <span>Disconnect</span>
+              </motion.button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
-
-// Helper function to format bytes
-function formatBytes(bytes) {
-  if (!bytes || bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 export default ViewerSession;

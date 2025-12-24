@@ -1,6 +1,6 @@
 /**
  * Session Store
- * Zustand store for managing Let'sClone sessions
+ * Zustand store for managing remote desktop sessions
  */
 
 import { create } from 'zustand';

@@ -139,6 +139,7 @@ const initializeSocketServer = (server) => {
           hostSocketId: socket.id,
           viewerSocketId: null,
           sessionId: session._id,
+          controlMode: 'full-control', // Default to full control
           createdAt: new Date()
         });
         
@@ -357,6 +358,11 @@ const initializeSocketServer = (server) => {
           return;
         }
         
+        // Check if host allows control
+        if (sessionRoom.controlMode === 'view-only') {
+          return;
+        }
+        
         // Get session to check if control is allowed
         const session = await Session.findActiveByCode(sessionCode);
         
@@ -382,6 +388,43 @@ const initializeSocketServer = (server) => {
         
       } catch (error) {
         logger.error('Control event error:', error);
+      }
+    });
+
+    /**
+     * Handle control mode change (host setting view-only or full-control)
+     */
+    socket.on('control-mode-change', async (data) => {
+      try {
+        const { sessionCode, controlMode } = data;
+        
+        const sessionRoom = sessionRooms.get(sessionCode);
+        
+        if (!sessionRoom) {
+          return;
+        }
+        
+        // Only host can change control mode
+        if (socket.id !== sessionRoom.hostSocketId) {
+          return;
+        }
+        
+        // Update the session room's control mode
+        sessionRoom.controlMode = controlMode;
+        sessionRooms.set(sessionCode, sessionRoom);
+        
+        // Notify viewer of the change
+        if (sessionRoom.viewerSocketId) {
+          io.to(sessionRoom.viewerSocketId).emit('control-mode-change', {
+            controlMode,
+            sessionCode
+          });
+        }
+        
+        logger.info(`Control mode changed for session ${sessionCode}: ${controlMode}`);
+        
+      } catch (error) {
+        logger.error('Control mode change error:', error);
       }
     });
 
