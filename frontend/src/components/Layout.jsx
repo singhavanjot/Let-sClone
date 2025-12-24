@@ -12,6 +12,7 @@ import {
   FiZap
 } from 'react-icons/fi';
 import { useAuthStore } from '../store';
+import FloatingTechDoodles from './FloatingTechDoodles';
 
 const navItems = [
   { path: '/dashboard', icon: FiHome, label: 'Dashboard', color: '#00f0ff' },
@@ -38,7 +39,10 @@ export default function Layout({ children }) {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#050508]">
+    <div className="min-h-screen flex bg-[#050508] relative">
+      {/* Floating Tech Doodles Background */}
+      <FloatingTechDoodles />
+      
       {/* Mobile Menu Button */}
       <motion.button
         className="lg:hidden fixed top-4 left-4 z-50 p-3 bg-[#0f0f1a] rounded-xl border border-cyan-500/20"
@@ -182,7 +186,7 @@ export default function Layout({ children }) {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto lg:ml-0">
+      <main className="flex-1 overflow-auto lg:ml-0 relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

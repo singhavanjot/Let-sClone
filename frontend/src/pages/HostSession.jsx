@@ -160,6 +160,28 @@ function HostSession() {
     }
   }, [socketConnected, currentDevice, registerDevice]);
 
+  // Listen for control events from viewer (for display/notification purposes)
+  // Note: Actual OS-level control requires a native desktop agent
+  useEffect(() => {
+    const handleControlEvent = (data) => {
+      const { event } = data;
+      console.log('Control event received from viewer:', event);
+      
+      // Show visual feedback for control events (cursor position indicator could be shown)
+      // In a real implementation, this would be handled by a native desktop agent
+      if (event.type === 'click' || event.type === 'dblclick') {
+        // Visual feedback only - actual control requires native agent
+        toast(`Viewer ${event.type === 'dblclick' ? 'double-' : ''}clicked at (${event.x}, ${event.y})`, {
+          icon: '🖱️',
+          duration: 1000
+        });
+      }
+    };
+
+    on('control:event', handleControlEvent);
+    return () => off('control:event', handleControlEvent);
+  }, [on, off]);
+
   useEffect(() => {
     const handleViewerJoined = (data) => {
       setViewerInfo(data);
@@ -481,6 +503,28 @@ function HostSession() {
 
             {/* Control Mode Selector */}
             <ControlModeSelector mode={controlMode} onChange={handleControlModeChange} />
+
+            {/* Control Info Card */}
+            {controlMode === 'full-control' && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-4 border border-amber-500/20 bg-amber-500/5"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <FiAlertCircle className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-amber-400 font-medium mb-1">Remote Control Active</h4>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Viewer can send control commands. You'll see notifications when they click or interact.
+                      For full OS-level control, a native desktop agent is required.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Connection Status */}
             <div className="text-center">

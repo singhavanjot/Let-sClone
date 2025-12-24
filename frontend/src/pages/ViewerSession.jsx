@@ -281,10 +281,10 @@ function ViewerSession() {
     }
   }, [currentDevice, getOrCreateDevice]);
 
-  // Register device with socket
+  // Register device with socket (use deviceId, not MongoDB _id)
   useEffect(() => {
-    if (socketConnected && currentDevice) {
-      registerDevice(currentDevice.id);
+    if (socketConnected && currentDevice?.deviceId) {
+      registerDevice(currentDevice.deviceId);
     }
   }, [socketConnected, currentDevice, registerDevice]);
 

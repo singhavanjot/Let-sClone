@@ -8,6 +8,7 @@ import { FiUser, FiMail, FiLock, FiArrowRight, FiZap, FiEye, FiEyeOff } from 're
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store';
+import { FloatingTechDoodles } from '../components';
 
 // Modern Input Component
 const CyberInput = ({ label, type = 'text', value, onChange, placeholder, icon: Icon, rightElement, error }) => (
@@ -97,6 +98,9 @@ function Register() {
         <div className="orb orb-2" />
         <div className="orb orb-3" />
       </div>
+      
+      {/* Floating Tech Doodles */}
+      <FloatingTechDoodles count={25} opacity={0.12} />
 
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 z-10">

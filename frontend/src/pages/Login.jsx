@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiMail, FiLock, FiArrowRight, FiZap, FiShield, FiGlobe, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuthStore } from '../store';
+import { FloatingTechDoodles } from '../components';
 import toast from 'react-hot-toast';
 
 // Animated Background Grid
@@ -11,28 +12,6 @@ const AnimatedGrid = () => (
     <div className="grid-3d" />
     <div className="orb orb-1" />
     <div className="orb orb-2" />
-    
-    {/* Floating particles */}
-    {Array.from({ length: 15 }).map((_, i) => (
-      <motion.div
-        key={i}
-        className="absolute w-1 h-1 bg-cyan-400 rounded-full"
-        style={{
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
-        }}
-        animate={{
-          y: [0, -50, 0],
-          opacity: [0.2, 0.8, 0.2],
-          scale: [1, 1.5, 1]
-        }}
-        transition={{
-          duration: 3 + Math.random() * 2,
-          repeat: Infinity,
-          delay: Math.random() * 2
-        }}
-      />
-    ))}
   </div>
 );
 
@@ -125,6 +104,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex bg-[#050508] relative overflow-hidden">
       <AnimatedGrid />
+      <FloatingTechDoodles count={25} opacity={0.12} />
 
       {/* Left Side - Branding */}
       <motion.div 

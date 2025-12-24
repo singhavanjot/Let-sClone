@@ -28,3 +28,4 @@ export { default as ScanLines } from './ScanLines';
 export { default as TypingText } from './TypingText';
 export { default as StatusBadge } from './StatusBadge';
 export { default as DataPanel } from './DataPanel';
+export { default as FloatingTechDoodles } from './FloatingTechDoodles';
