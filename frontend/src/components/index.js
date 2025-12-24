@@ -13,3 +13,4 @@ export { default as SessionCodeDisplay } from './SessionCodeDisplay';
 export { default as ConnectionStatus } from './ConnectionStatus';
 export { default as RemoteScreen } from './RemoteScreen';
 export { default as DeviceCard } from './DeviceCard';
+export { default as Logo } from './Logo';

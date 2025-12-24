@@ -5,10 +5,10 @@
 
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FiMail, FiLock, FiMonitor } from 'react-icons/fi';
+import { FiMail, FiLock } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
-import { Input, Button, Card } from '../components';
+import { Input, Button, Card, Logo } from '../components';
 import { useAuthStore } from '../store';
 
 function Login() {
@@ -60,11 +60,11 @@ function Login() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 mb-4">
-            <FiMonitor className="w-8 h-8 text-white" />
+          <div className="flex justify-center mb-4">
+            <Logo size="xl" showText={false} />
           </div>
           <h1 className="text-3xl font-bold text-white">Welcome Back</h1>
-          <p className="text-gray-400 mt-2">Sign in to your RemoteDesk account</p>
+          <p className="text-gray-400 mt-2">Sign in to your Let'sClone account</p>
         </div>
 
         {/* Login Form */}

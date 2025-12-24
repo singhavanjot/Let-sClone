@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Background Circle with Gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="screenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a"/>
+      <stop offset="100%" style="stop-color:#312e81"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Main Circle Background -->
+  <circle cx="100" cy="100" r="95" fill="url(#bgGradient)" opacity="0.15"/>
+  <circle cx="100" cy="100" r="95" stroke="url(#bgGradient)" stroke-width="3" fill="none"/>
+  
+  <!-- Monitor/Screen Shape -->
+  <rect x="45" y="45" width="110" height="80" rx="8" fill="url(#screenGradient)" stroke="url(#bgGradient)" stroke-width="3"/>
+  
+  <!-- Screen Inner -->
+  <rect x="52" y="52" width="96" height="66" rx="4" fill="#0f172a"/>
+  
+  <!-- Connection Lines on Screen -->
+  <path d="M70 75 L85 90 L100 70 L115 95 L130 80" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="70" cy="75" r="4" fill="#22c55e"/>
+  <circle cx="130" cy="80" r="4" fill="#22c55e"/>
+  
+  <!-- Monitor Stand -->
+  <rect x="90" y="125" width="20" height="15" fill="url(#bgGradient)"/>
+  <rect x="75" y="140" width="50" height="8" rx="4" fill="url(#bgGradient)"/>
+  
+  <!-- Connection Arrows (symbolizing sharing/cloning) -->
+  <path d="M35 100 L25 90 M25 90 L25 110 M25 90 L35 90" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M165 100 L175 90 M175 90 L175 110 M175 90 L165 90" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  
+  <!-- Pulse Effect Circles -->
+  <circle cx="70" cy="75" r="8" stroke="#22c55e" stroke-width="1.5" fill="none" opacity="0.5"/>
+  <circle cx="130" cy="80" r="8" stroke="#22c55e" stroke-width="1.5" fill="none" opacity="0.5"/>
+</svg>

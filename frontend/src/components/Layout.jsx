@@ -16,6 +16,7 @@ import {
   FiUser
 } from 'react-icons/fi';
 import { useAuthStore } from '../store';
+import Logo from './Logo';
 import toast from 'react-hot-toast';
 
 function Layout() {
@@ -62,9 +63,8 @@ function Layout() {
       >
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-dark-700">
-          <Link to="/dashboard" className="flex items-center space-x-2">
-            <FiMonitor className="w-8 h-8 text-primary-500" />
-            <span className="text-xl font-bold text-white">RemoteDesk</span>
+          <Link to="/dashboard" className="flex items-center">
+            <Logo size="sm" />
           </Link>
           <button
             className="lg:hidden text-gray-400 hover:text-white"
@@ -133,9 +133,8 @@ function Layout() {
           >
             <FiMenu className="w-6 h-6" />
           </button>
-          <div className="flex items-center ml-4 space-x-2">
-            <FiMonitor className="w-6 h-6 text-primary-500" />
-            <span className="text-lg font-bold text-white">RemoteDesk</span>
+          <div className="flex items-center ml-4">
+            <Logo size="sm" />
           </div>
         </header>
 
