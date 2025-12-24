@@ -155,7 +155,8 @@ function HostSession() {
 
   useEffect(() => {
     if (socketConnected && currentDevice) {
-      registerDevice(currentDevice.id);
+      // Use deviceId (the generated unique ID), not MongoDB _id
+      registerDevice(currentDevice.deviceId);
     }
   }, [socketConnected, currentDevice, registerDevice]);
 
@@ -201,8 +202,9 @@ function HostSession() {
         return;
       }
 
-      // Create session - returns { success, session } or { success: false, error }
-      const result = await createSession(currentDevice.id);
+      // Create session - use deviceId (not MongoDB _id)
+      // Backend expects deviceId field which is the generated unique ID
+      const result = await createSession(currentDevice.deviceId);
       
       if (!result.success || !result.session) {
         toast.error(result.error || 'Failed to create session');

@@ -14,6 +14,7 @@ import {
 import toast from 'react-hot-toast';
 import { LoadingSpinner } from '../components';
 import { useDeviceStore, useSessionStore } from '../store';
+import { useSocket } from '../hooks';
 
 function JoinSession() {
   const [sessionCode, setSessionCode] = useState('');
@@ -24,12 +25,20 @@ function JoinSession() {
   const navigate = useNavigate();
   const { currentDevice, getOrCreateDevice } = useDeviceStore();
   const { joinSession, activeSessions, fetchActiveSessions } = useSessionStore();
+  const { isConnected: socketConnected, registerDevice } = useSocket();
 
   useEffect(() => {
     if (!currentDevice) {
       getOrCreateDevice();
     }
   }, [currentDevice, getOrCreateDevice]);
+
+  // Register device via socket when connected (to set device status to online)
+  useEffect(() => {
+    if (socketConnected && currentDevice?.deviceId) {
+      registerDevice(currentDevice.deviceId);
+    }
+  }, [socketConnected, currentDevice, registerDevice]);
 
   useEffect(() => {
     fetchActiveSessions();
@@ -85,11 +94,15 @@ function JoinSession() {
     setError('');
 
     try {
-      const session = await joinSession(sessionCode, currentDevice.id);
+      // Use deviceId (the generated unique ID), not MongoDB _id
+      const result = await joinSession(sessionCode, currentDevice.deviceId);
       
-      if (session) {
+      if (result?.success && result?.session) {
         toast.success('Connected successfully!');
         navigate(`/session/${sessionCode}`);
+      } else {
+        setError(result?.error || 'Failed to join session');
+        toast.error('Connection failed');
       }
     } catch (err) {
       setError(err.message || 'Failed to join session');
@@ -170,17 +183,27 @@ function JoinSession() {
             <motion.button
               type="submit"
               disabled={isLoading || sessionCode.length !== 6 || !currentDevice}
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.03, boxShadow: '0 0 40px rgba(99, 102, 241, 0.4)' }}
               whileTap={{ scale: 0.98 }}
-              className="btn-primary w-full flex items-center justify-center space-x-2 disabled:opacity-50"
+              className="relative w-full group overflow-hidden rounded-xl py-4 px-6 font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)',
+                backgroundSize: '200% 200%',
+                animation: sessionCode.length === 6 && currentDevice ? 'gradient-shift 3s ease infinite' : 'none'
+              }}
             >
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
               {isLoading ? (
-                <div className="loading-spinner w-5 h-5" />
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Connecting...</span>
+                </div>
               ) : (
-                <>
+                <span className="flex items-center justify-center space-x-2">
+                  <FiLink className="w-5 h-5" />
                   <span>Join Session</span>
-                  <FiArrowRight className="w-5 h-5" />
-                </>
+                  <FiArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </span>
               )}
             </motion.button>
 
@@ -189,7 +212,7 @@ function JoinSession() {
                 <LoadingSpinner size="sm" />
                 <span className="ml-2">Registering your device...</span>
               </p>
-            )}
+            )}}
           </form>
         </div>
       </motion.div>
