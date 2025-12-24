@@ -201,21 +201,33 @@ function HostSession() {
         return;
       }
 
-      const newSession = await createSession(currentDevice.id);
+      // Create session - returns { success, session } or { success: false, error }
+      const result = await createSession(currentDevice.id);
       
-      if (!newSession) {
-        toast.error('Failed to create session');
+      if (!result.success || !result.session) {
+        toast.error(result.error || 'Failed to create session');
         return;
       }
 
+      const newSession = result.session;
       setSession(newSession);
-      await startHosting(newSession.sessionCode);
-      setStep('sharing');
-      toast.success('Screen sharing started!');
-      await fetchDevices();
+      
+      // Start WebRTC hosting with session code
+      const hostingStarted = await startHosting(newSession.sessionCode);
+      
+      if (hostingStarted) {
+        setStep('sharing');
+        toast.success('Screen sharing started!');
+        await fetchDevices();
+      } else {
+        // If screen sharing was cancelled or failed
+        setSession(null);
+        await endSession(newSession.id);
+      }
     } catch (error) {
       console.error('Start sharing error:', error);
       toast.error(error.message || 'Failed to start sharing');
+      setStep('setup');
     }
   };
 
@@ -276,73 +288,174 @@ function HostSession() {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            <div className="glass-card p-12 text-center">
-              <motion.div 
-                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center mx-auto mb-6"
-                animate={{ 
-                  boxShadow: [
-                    '0 0 20px rgba(99, 102, 241, 0.3)',
-                    '0 0 40px rgba(99, 102, 241, 0.5)',
-                    '0 0 20px rgba(99, 102, 241, 0.3)',
-                  ]
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <FiMonitor className="w-10 h-10 text-white" />
-              </motion.div>
-              
-              <h2 className="text-xl font-bold text-white mb-2">Ready to Share Your Screen?</h2>
-              <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                Start a session and share the code with anyone who needs to view
-                or control your desktop remotely.
-              </p>
-
-              {!isScreenCaptureSupported() && (
-                <div className="flex items-center justify-center p-4 mb-6 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400">
-                  <FiAlertCircle className="w-5 h-5 mr-2" />
-                  <span>Screen capture not supported in this browser</span>
+            {/* Main Start Sharing Card */}
+            <div className="glass-card overflow-hidden">
+              {/* Animated background gradient */}
+              <div className="relative p-12 text-center">
+                {/* Background glow effects */}
+                <motion.div 
+                  className="absolute inset-0 opacity-30"
+                  style={{
+                    background: 'radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.4) 0%, transparent 50%)'
+                  }}
+                  animate={{
+                    opacity: [0.2, 0.4, 0.2],
+                  }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                />
+                
+                {/* Floating particles */}
+                <div className="absolute inset-0 overflow-hidden">
+                  {[...Array(6)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute w-1 h-1 rounded-full bg-indigo-400/40"
+                      style={{
+                        left: `${20 + i * 15}%`,
+                        top: `${30 + (i % 3) * 20}%`,
+                      }}
+                      animate={{
+                        y: [-10, 10, -10],
+                        opacity: [0.3, 0.7, 0.3],
+                      }}
+                      transition={{
+                        duration: 2 + i * 0.5,
+                        repeat: Infinity,
+                        delay: i * 0.3,
+                      }}
+                    />
+                  ))}
                 </div>
-              )}
 
-              <motion.button
-                onClick={handleStartSharing}
-                disabled={sessionLoading || !currentDevice || !isScreenCaptureSupported()}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="btn-primary inline-flex items-center space-x-2 disabled:opacity-50"
-              >
-                {sessionLoading ? (
-                  <div className="loading-spinner w-5 h-5" />
-                ) : (
-                  <>
-                    <FiShare2 className="w-5 h-5" />
-                    <span>Start Sharing</span>
-                  </>
-                )}
-              </motion.button>
-
-              {!currentDevice && (
-                <p className="text-sm text-gray-500 mt-4 flex items-center justify-center">
-                  <LoadingSpinner size="sm" />
-                  <span className="ml-2">Registering your device...</span>
+                {/* Main icon with animated ring */}
+                <div className="relative inline-block mb-8">
+                  {/* Outer pulsing ring */}
+                  <motion.div
+                    className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-indigo-500/20 to-cyan-400/20"
+                    animate={{
+                      scale: [1, 1.1, 1],
+                      opacity: [0.5, 0.2, 0.5],
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  
+                  {/* Icon container */}
+                  <motion.div 
+                    className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-400 flex items-center justify-center"
+                    animate={{ 
+                      boxShadow: [
+                        '0 0 30px rgba(99, 102, 241, 0.4)',
+                        '0 0 50px rgba(99, 102, 241, 0.6)',
+                        '0 0 30px rgba(99, 102, 241, 0.4)',
+                      ],
+                      rotateY: [0, 5, 0, -5, 0],
+                    }}
+                    transition={{ duration: 4, repeat: Infinity }}
+                  >
+                    <FiMonitor className="w-12 h-12 text-white" />
+                    
+                    {/* Screen shine effect */}
+                    <motion.div
+                      className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/0 via-white/20 to-white/0"
+                      animate={{
+                        opacity: [0, 0.5, 0],
+                        x: [-40, 40],
+                      }}
+                      transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+                    />
+                  </motion.div>
+                </div>
+              
+                <h2 className="text-2xl font-bold text-white mb-3">Ready to Share Your Screen?</h2>
+                <p className="text-gray-400 mb-10 max-w-md mx-auto leading-relaxed">
+                  Start a secure session and share the code with anyone who needs to view
+                  or control your desktop remotely.
                 </p>
-              )}
+
+                {!isScreenCaptureSupported() && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-center p-4 mb-8 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400"
+                  >
+                    <FiAlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                    <span>Screen capture not supported in this browser</span>
+                  </motion.div>
+                )}
+
+                {/* Enhanced Start Sharing Button */}
+                <motion.button
+                  onClick={handleStartSharing}
+                  disabled={sessionLoading || !currentDevice || !isScreenCaptureSupported()}
+                  className="group relative inline-flex items-center justify-center px-8 py-4 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-400 text-white font-semibold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: 1.03, boxShadow: '0 20px 40px rgba(99, 102, 241, 0.3)' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {/* Button shine effect */}
+                  <motion.span
+                    className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0"
+                    initial={{ x: '-100%' }}
+                    whileHover={{ x: '100%' }}
+                    transition={{ duration: 0.6 }}
+                  />
+                  
+                  {sessionLoading ? (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Starting Session...</span>
+                    </div>
+                  ) : (
+                    <span className="flex items-center space-x-3">
+                      <FiShare2 className="w-6 h-6" />
+                      <span>Start Sharing</span>
+                      <motion.span
+                        animate={{ x: [0, 4, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      >
+                        →
+                      </motion.span>
+                    </span>
+                  )}
+                </motion.button>
+
+                {!currentDevice && (
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-sm text-gray-500 mt-6 flex items-center justify-center"
+                  >
+                    <LoadingSpinner size="sm" />
+                    <span className="ml-2">Registering your device...</span>
+                  </motion.p>
+                )}
+              </div>
             </div>
 
-            {/* Tips */}
+            {/* Tips Section */}
             <div className="glass-card p-6">
-              <h3 className="font-semibold text-white mb-4">Tips for a good session</h3>
-              <div className="grid md:grid-cols-2 gap-3">
+              <h3 className="font-semibold text-white mb-5 flex items-center">
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center mr-3">
+                  💡
+                </span>
+                Tips for a great session
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
                 {[
-                  'Use a stable internet connection',
-                  'Close unnecessary applications',
-                  'Share only what you want visible',
-                  'Only share code with trusted people',
-                ].map((tip, i) => (
-                  <div key={i} className="flex items-center space-x-3 p-3 rounded-lg bg-white/5">
-                    <div className="w-2 h-2 rounded-full bg-indigo-400" />
-                    <span className="text-gray-300 text-sm">{tip}</span>
-                  </div>
+                  { icon: '🌐', tip: 'Use a stable internet connection' },
+                  { icon: '🧹', tip: 'Close unnecessary applications' },
+                  { icon: '👁️', tip: 'Share only what you want visible' },
+                  { icon: '🔒', tip: 'Only share code with trusted people' },
+                ].map((item, i) => (
+                  <motion.div 
+                    key={i} 
+                    className="flex items-center space-x-3 p-4 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <span className="text-xl">{item.icon}</span>
+                    <span className="text-gray-300 text-sm">{item.tip}</span>
+                  </motion.div>
                 ))}
               </div>
             </div>
