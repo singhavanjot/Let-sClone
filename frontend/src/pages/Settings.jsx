@@ -15,7 +15,10 @@ import {
   FiLock,
   FiEye,
   FiEyeOff,
-  FiCheck
+  FiCheck,
+  FiCopy,
+  FiCpu,
+  FiDownload
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store';
@@ -101,13 +104,14 @@ const SettingSection = ({ icon: Icon, title, children }) => (
 );
 
 function Settings() {
-  const { user, logout, updateProfile, changePassword } = useAuthStore();
+  const { user, token, logout, updateProfile, changePassword } = useAuthStore();
   const [name, setName] = useState(user?.name || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [tokenCopied, setTokenCopied] = useState(false);
   
   // Update name when user changes
   useEffect(() => {
@@ -328,6 +332,79 @@ function Settings() {
             enabled={settings.soundEffects}
             onChange={() => handleToggle('soundEffects')}
           />
+        </SettingSection>
+      </motion.div>
+
+      {/* Desktop Agent Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+      >
+        <SettingSection icon={FiCpu} title="Desktop Agent">
+          <div className="p-4 rounded-xl bg-[#0a0a15] border border-cyan-500/10">
+            <p className="text-gray-400 text-sm mb-4">
+              To enable <strong className="text-cyan-400">actual mouse and keyboard control</strong> on the host machine, 
+              you need to run the Desktop Agent app. Copy your auth token below to use in the agent.
+            </p>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-black/30 border border-gray-700">
+                <div className="flex-1 mr-3">
+                  <p className="text-xs text-gray-500 mb-1">Your Auth Token</p>
+                  <p className="text-white font-mono text-sm truncate">
+                    {token ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}` : 'Not available'}
+                  </p>
+                </div>
+                <motion.button
+                  onClick={() => {
+                    if (token) {
+                      navigator.clipboard.writeText(token);
+                      setTokenCopied(true);
+                      toast.success('Token copied to clipboard!');
+                      setTimeout(() => setTokenCopied(false), 3000);
+                    }
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  disabled={!token}
+                  className={`p-2 rounded-lg transition-all ${
+                    tokenCopied 
+                      ? 'bg-emerald-500/20 text-emerald-400' 
+                      : 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
+                  } disabled:opacity-50`}
+                >
+                  {tokenCopied ? <FiCheck className="w-5 h-5" /> : <FiCopy className="w-5 h-5" />}
+                </motion.button>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <p className="text-gray-500 text-xs">
+                  ⚠️ Keep your token secret - it grants access to your account
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/20">
+            <div className="flex items-start space-x-3">
+              <FiDownload className="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-white font-medium mb-1">Download Desktop Agent</p>
+                <p className="text-gray-400 text-sm mb-3">
+                  Run the agent on the host machine to enable full remote control.
+                </p>
+                <a
+                  href="https://github.com/yourusername/letsclone/releases"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-2 text-purple-400 hover:text-purple-300 text-sm transition-colors"
+                >
+                  <span>View releases on GitHub →</span>
+                </a>
+              </div>
+            </div>
+          </div>
         </SettingSection>
       </motion.div>
 

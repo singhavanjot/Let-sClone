@@ -386,6 +386,14 @@ const initializeSocketServer = (server) => {
           fromViewer: socket.userId
         });
         
+        // Also forward to desktop agent if registered
+        if (sessionRoom.agentSocketId) {
+          io.to(sessionRoom.agentSocketId).emit('control:event', {
+            event,
+            fromViewer: socket.userId
+          });
+        }
+        
       } catch (error) {
         logger.error('Control event error:', error);
       }
@@ -497,6 +505,106 @@ const initializeSocketServer = (server) => {
     });
 
     /**
+     * Handle desktop agent registration
+     * Desktop agents receive control events to execute on the host machine
+     */
+    socket.on('agent:register', async (data) => {
+      try {
+        const { sessionCode, agentType, capabilities } = data;
+        
+        const sessionRoom = sessionRooms.get(sessionCode);
+        
+        if (!sessionRoom) {
+          return socket.emit('error', { message: 'Session not found' });
+        }
+        
+        // Verify the agent belongs to the host user
+        if (sessionRoom.hostSocketId !== socket.id) {
+          // Store agent socket separately
+          sessionRoom.agentSocketId = socket.id;
+          sessionRoom.agentCapabilities = capabilities || ['mouse', 'keyboard'];
+          sessionRooms.set(sessionCode, sessionRoom);
+        }
+        
+        socket.sessionCode = sessionCode;
+        socket.isAgent = true;
+        socket.agentType = agentType;
+        
+        // Join the session room
+        socket.join(`session:${sessionCode}`);
+        
+        socket.emit('agent:registered', {
+          sessionCode,
+          message: 'Desktop agent registered successfully',
+          capabilities
+        });
+        
+        // Notify host that agent is connected
+        if (sessionRoom.hostSocketId) {
+          io.to(sessionRoom.hostSocketId).emit('agent:connected', {
+            agentType,
+            capabilities
+          });
+        }
+        
+        logger.info(`Desktop agent registered for session: ${sessionCode}`);
+        
+      } catch (error) {
+        logger.error('Agent registration error:', error);
+        socket.emit('error', { message: 'Failed to register agent' });
+      }
+    });
+
+    /**
+     * Forward control events to desktop agent
+     * Modified to also send to agent if registered
+     */
+    socket.on('control:forward-to-agent', async (data) => {
+      try {
+        const { sessionCode, event } = data;
+        
+        const sessionRoom = sessionRooms.get(sessionCode);
+        
+        if (!sessionRoom || !sessionRoom.agentSocketId) {
+          return;
+        }
+        
+        // Forward to desktop agent
+        io.to(sessionRoom.agentSocketId).emit('control:event', {
+          event,
+          fromViewer: socket.userId
+        });
+        
+      } catch (error) {
+        logger.error('Control forward to agent error:', error);
+      }
+    });
+
+    /**
+     * Handle agent status updates
+     */
+    socket.on('agent:status', async (data) => {
+      try {
+        const { sessionCode, status } = data;
+        
+        const sessionRoom = sessionRooms.get(sessionCode);
+        
+        if (!sessionRoom) return;
+        
+        // Notify host of agent status
+        if (sessionRoom.hostSocketId) {
+          io.to(sessionRoom.hostSocketId).emit('agent:status', {
+            sessionCode,
+            status
+          });
+        }
+        
+      } catch (error) {
+        logger.error('Agent status error:', error);
+      }
+    });
+
+    /**
      * Handle disconnection
      */
     socket.on('disconnect', async () => {
@@ -508,6 +616,20 @@ const initializeSocketServer = (server) => {
           const device = await Device.findOne({ deviceId: socket.deviceId });
           if (device) {
             await device.goOffline();
+          }
+        }
+        
+        // Handle agent disconnect
+        if (socket.isAgent && socket.sessionCode) {
+          const sessionRoom = sessionRooms.get(socket.sessionCode);
+          if (sessionRoom && sessionRoom.agentSocketId === socket.id) {
+            sessionRoom.agentSocketId = null;
+            sessionRooms.set(socket.sessionCode, sessionRoom);
+            
+            // Notify host
+            if (sessionRoom.hostSocketId) {
+              io.to(sessionRoom.hostSocketId).emit('agent:disconnected');
+            }
           }
         }
         

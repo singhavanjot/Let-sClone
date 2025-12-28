@@ -16,12 +16,14 @@ import {
   FiEye,
   FiMousePointer,
   FiLock,
-  FiUnlock
+  FiUnlock,
+  FiDownload,
+  FiLink
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { RemoteScreen, ConnectionStatus, LoadingSpinner } from '../components';
 import { useWebRTC, useSocket } from '../hooks';
-import { useDeviceStore, useSessionStore } from '../store';
+import { useDeviceStore, useSessionStore, useAuthStore } from '../store';
 import { isScreenCaptureSupported } from '../webrtc';
 
 // Control Mode Options
@@ -66,7 +68,7 @@ const ControlModeSelector = ({ mode, onChange }) => (
 );
 
 // Session Code Display Component
-const SessionCodeDisplay = ({ code, onCopy, copied }) => (
+const SessionCodeDisplay = ({ code, onCopy, copied, onLaunchAgent, agentConnected }) => (
   <div className="glass-card p-8 text-center">
     <p className="text-gray-400 mb-4">Share this code with your viewer</p>
     
@@ -84,19 +86,66 @@ const SessionCodeDisplay = ({ code, onCopy, copied }) => (
       ))}
     </div>
 
-    <motion.button
-      onClick={onCopy}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className={`inline-flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all ${
-        copied 
-          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-          : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'
-      }`}
-    >
-      {copied ? <FiCheck className="w-5 h-5" /> : <FiCopy className="w-5 h-5" />}
-      <span>{copied ? 'Copied!' : 'Copy Code'}</span>
-    </motion.button>
+    <div className="flex flex-col sm:flex-row justify-center gap-3 mb-6">
+      <motion.button
+        onClick={onCopy}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className={`inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all ${
+          copied 
+            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+            : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'
+        }`}
+      >
+        {copied ? <FiCheck className="w-5 h-5" /> : <FiCopy className="w-5 h-5" />}
+        <span>{copied ? 'Copied!' : 'Copy Code'}</span>
+      </motion.button>
+    </div>
+
+    {/* Desktop Agent Section */}
+    <div className="border-t border-gray-700 pt-6 mt-6">
+      <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full mb-4 ${
+        agentConnected 
+          ? 'bg-emerald-500/20 text-emerald-400' 
+          : 'bg-orange-500/20 text-orange-400'
+      }`}>
+        <div className={`w-2 h-2 rounded-full ${agentConnected ? 'bg-emerald-400' : 'bg-orange-400 animate-pulse'}`} />
+        <span className="text-sm font-medium">
+          {agentConnected ? 'Desktop Agent Connected' : 'Desktop Agent Required'}
+        </span>
+      </div>
+      
+      {!agentConnected && (
+        <div className="space-y-3">
+          <p className="text-gray-500 text-sm">
+            Enable mouse & keyboard control by connecting the Desktop Agent
+          </p>
+          
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
+            <motion.button
+              onClick={onLaunchAgent}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30 transition-all"
+            >
+              <FiLink className="w-5 h-5" />
+              <span>Launch Agent</span>
+            </motion.button>
+            
+            <motion.a
+              href="/downloads/LetsClone-Agent-Setup.exe"
+              download
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all"
+            >
+              <FiDownload className="w-5 h-5" />
+              <span>Download Agent</span>
+            </motion.a>
+          </div>
+        </div>
+      )}
+    </div>
   </div>
 );
 
@@ -106,10 +155,12 @@ function HostSession() {
   const [viewerInfo, setViewerInfo] = useState(null);
   const [codeCopied, setCodeCopied] = useState(false);
   const [controlMode, setControlMode] = useState('full-control'); // 'view-only' or 'full-control'
+  const [agentConnected, setAgentConnected] = useState(false);
   
   const { currentDevice, getOrCreateDevice, fetchDevices } = useDeviceStore();
   const { createSession, endSession, isLoading: sessionLoading } = useSessionStore();
   const { isConnected: socketConnected, registerDevice, on, off, emit } = useSocket();
+  const { token } = useAuthStore();
   
   const {
     connectionState,
@@ -127,6 +178,49 @@ function HostSession() {
       setTimeout(() => setCodeCopied(false), 3000);
     }
   };
+
+  // Launch desktop agent with auto-connect
+  const handleLaunchAgent = () => {
+    if (!session?.sessionCode || !token) {
+      toast.error('Session not ready');
+      return;
+    }
+    
+    // Try custom protocol first
+    const agentUrl = `letsclone://connect?code=${session.sessionCode}&token=${encodeURIComponent(token)}`;
+    
+    // Fallback message
+    const fallbackMessage = `If the agent doesn't open, please:\n1. Download and install the Desktop Agent\n2. Open it manually\n3. Enter code: ${session.sessionCode}`;
+    
+    // Attempt to open custom protocol
+    window.location.href = agentUrl;
+    
+    // Show instructions after a delay (in case protocol fails)
+    setTimeout(() => {
+      toast((t) => (
+        <div className="text-sm">
+          <p className="font-medium mb-2">Agent Launch Attempted</p>
+          <p className="text-gray-300">If it didn't open, enter this code manually:</p>
+          <p className="font-mono text-cyan-400 text-lg mt-1">{session.sessionCode}</p>
+        </div>
+      ), { duration: 5000 });
+    }, 1000);
+  };
+
+  // Listen for agent connection status
+  useEffect(() => {
+    const handleAgentStatus = (data) => {
+      if (data.sessionCode === session?.sessionCode) {
+        setAgentConnected(data.connected);
+        if (data.connected) {
+          toast.success('Desktop Agent connected! Full control enabled.');
+        }
+      }
+    };
+
+    on('agent:status', handleAgentStatus);
+    return () => off('agent:status', handleAgentStatus);
+  }, [on, off, session?.sessionCode]);
 
   // Toggle control mode
   const handleControlModeChange = (mode) => {
@@ -499,6 +593,8 @@ function HostSession() {
               code={session.sessionCode}
               onCopy={handleCopyCode}
               copied={codeCopied}
+              onLaunchAgent={handleLaunchAgent}
+              agentConnected={agentConnected}
             />
 
             {/* Control Mode Selector */}

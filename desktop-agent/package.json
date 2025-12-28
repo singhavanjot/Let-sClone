@@ -1,0 +1,63 @@
+{
+  "name": "letsclone-desktop-agent",
+  "version": "1.0.0",
+  "description": "Desktop agent for Let's Clone remote control",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-packager . LetsCloneAgent --platform=win32 --arch=x64 --out=dist --overwrite --asar",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": [
+    "remote-control",
+    "desktop",
+    "electron"
+  ],
+  "author": "Let's Clone",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "electron-packager": "^17.1.2"
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0",
+    "socket.io-client": "^4.7.2"
+  },
+  "build": {
+    "appId": "com.letsclone.desktop-agent",
+    "productName": "LetsClone Agent",
+    "directories": {
+      "output": "dist"
+    },
+    "protocols": {
+      "name": "LetsClone Protocol",
+      "schemes": [
+        "letsclone"
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  }
+}

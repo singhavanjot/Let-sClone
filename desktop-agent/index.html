@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Let's Clone - Desktop Agent</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 360px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 16px;
+      margin: 0 auto 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: #6366f1;
+    }
+
+    input::placeholder {
+      color: #555;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-secondary {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #aaa;
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .status-indicator.disconnected {
+      background: #ef4444;
+    }
+
+    .status-indicator.connecting {
+      background: #f59e0b;
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-indicator.connected {
+      background: #22c55e;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-text {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .screen-info {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 10px;
+    }
+
+    .screen-info span {
+      color: #888;
+      font-size: 13px;
+    }
+
+    .screen-info strong {
+      color: #fff;
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .connected-info {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .connected-info .session-code {
+      font-family: 'Courier New', monospace;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: #22c55e;
+      margin: 10px 0;
+    }
+
+    .connected-info p {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🖥️</div>
+      <h1>Let's Clone</h1>
+      <p class="subtitle">Desktop Control Agent</p>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="status">
+      <div class="status-indicator disconnected" id="statusIndicator"></div>
+      <span class="status-text" id="statusText">Disconnected</span>
+    </div>
+
+    <!-- Error Message -->
+    <div class="error-message" id="errorMessage"></div>
+
+    <!-- Connection Form -->
+    <div class="card" id="connectionForm">
+      <div class="form-group">
+        <label>Server URL</label>
+        <input type="text" id="serverUrl" placeholder="http://localhost:5000" />
+      </div>
+      
+      <div class="form-group">
+        <label>Session Code</label>
+        <input type="text" id="sessionCode" placeholder="Enter 6-digit code" maxlength="6" />
+      </div>
+      
+      <div class="form-group">
+        <label>Auth Token</label>
+        <input type="password" id="authToken" placeholder="Paste your auth token" />
+      </div>
+
+      <button class="btn btn-primary" id="connectBtn">Connect</button>
+      <button class="btn btn-outline" id="testBtn">Test Mouse Control</button>
+    </div>
+
+    <!-- Connected State -->
+    <div class="card hidden" id="connectedState">
+      <div class="connected-info">
+        <p>Connected to session</p>
+        <div class="session-code" id="connectedSessionCode">------</div>
+        <p>Remote control is active</p>
+      </div>
+      
+      <button class="btn btn-secondary" id="disconnectBtn">Disconnect</button>
+    </div>
+
+    <!-- Screen Info -->
+    <div class="card">
+      <h3 style="font-size: 14px; color: #aaa; margin-bottom: 10px;">Screen Information</h3>
+      <div class="screen-info">
+        <span>Resolution</span>
+        <strong id="screenResolution">Loading...</strong>
+      </div>
+      <div class="screen-info">
+        <span>Scale Factor</span>
+        <strong id="scaleFactor">Loading...</strong>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusText = document.getElementById('statusText');
+    const errorMessage = document.getElementById('errorMessage');
+    const connectionForm = document.getElementById('connectionForm');
+    const connectedState = document.getElementById('connectedState');
+    const connectedSessionCode = document.getElementById('connectedSessionCode');
+    
+    const serverUrlInput = document.getElementById('serverUrl');
+    const sessionCodeInput = document.getElementById('sessionCode');
+    const authTokenInput = document.getElementById('authToken');
+    
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const testBtn = document.getElementById('testBtn');
+    
+    const screenResolution = document.getElementById('screenResolution');
+    const scaleFactor = document.getElementById('scaleFactor');
+
+    // State
+    let isConnecting = false;
+
+    // Initialize
+    async function init() {
+      // Load screen info
+      const screenInfo = await window.electronAPI.getScreenInfo();
+      screenResolution.textContent = `${screenInfo.width} × ${screenInfo.height}`;
+      scaleFactor.textContent = `${screenInfo.scaleFactor}x`;
+
+      // Set up event listeners
+      window.electronAPI.onInitSettings((data) => {
+        serverUrlInput.value = data.serverUrl || 'https://lets-clone-backend.onrender.com';
+      });
+
+      window.electronAPI.onConnectionStatus(handleConnectionStatus);
+      window.electronAPI.onError(handleError);
+      
+      // Listen for auto-connect from deep link
+      window.electronAPI.onAutoConnect(handleAutoConnect);
+    }
+
+    // Handle auto-connect from website deep link
+    function handleAutoConnect(data) {
+      console.log('Auto-connect received:', data);
+      
+      if (data.sessionCode) {
+        sessionCodeInput.value = data.sessionCode;
+      }
+      if (data.token) {
+        authTokenInput.value = data.token;
+      }
+      
+      // Show notification
+      statusText.textContent = 'Auto-connecting...';
+      statusIndicator.className = 'status-indicator connecting';
+      
+      // Auto-click connect after a short delay
+      if (data.sessionCode && data.token && serverUrlInput.value) {
+        setTimeout(() => {
+          connectBtn.click();
+        }, 500);
+      }
+    }
+
+    // Handle connection status changes
+    function handleConnectionStatus(data) {
+      const { status, sessionCode, reason } = data;
+      
+      statusIndicator.className = 'status-indicator ' + status;
+      
+      switch (status) {
+        case 'connected':
+          statusText.textContent = 'Connected';
+          connectedSessionCode.textContent = sessionCode;
+          connectionForm.classList.add('hidden');
+          connectedState.classList.remove('hidden');
+          isConnecting = false;
+          connectBtn.disabled = false;
+          connectBtn.textContent = 'Connect';
+          hideError();
+          break;
+          
+        case 'disconnected':
+          statusText.textContent = 'Disconnected';
+          connectionForm.classList.remove('hidden');
+          connectedState.classList.add('hidden');
+          isConnecting = false;
+          connectBtn.disabled = false;
+          connectBtn.textContent = 'Connect';
+          if (reason) {
+            showError(`Disconnected: ${reason}`);
+          }
+          break;
+          
+        case 'connecting':
+          statusText.textContent = 'Connecting...';
+          statusIndicator.className = 'status-indicator connecting';
+          break;
+      }
+    }
+
+    // Handle errors
+    function handleError(data) {
+      showError(data.message);
+      isConnecting = false;
+      connectBtn.disabled = false;
+      connectBtn.textContent = 'Connect';
+    }
+
+    // Show error message
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    // Hide error message
+    function hideError() {
+      errorMessage.style.display = 'none';
+    }
+
+    // Connect button click
+    connectBtn.addEventListener('click', async () => {
+      const serverUrl = serverUrlInput.value.trim();
+      const sessionCode = sessionCodeInput.value.trim().toUpperCase();
+      const token = authTokenInput.value.trim();
+
+      if (!serverUrl || !sessionCode || !token) {
+        showError('Please fill in all fields');
+        return;
+      }
+
+      if (sessionCode.length !== 6) {
+        showError('Session code must be 6 characters');
+        return;
+      }
+
+      hideError();
+      isConnecting = true;
+      connectBtn.disabled = true;
+      connectBtn.textContent = 'Connecting...';
+      statusIndicator.className = 'status-indicator connecting';
+      statusText.textContent = 'Connecting...';
+
+      try {
+        await window.electronAPI.connect({ serverUrl, token, sessionCode });
+      } catch (error) {
+        showError(error.message);
+        isConnecting = false;
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Connect';
+      }
+    });
+
+    // Disconnect button click
+    disconnectBtn.addEventListener('click', async () => {
+      await window.electronAPI.disconnect();
+    });
+
+    // Test button click
+    testBtn.addEventListener('click', async () => {
+      try {
+        const result = await window.electronAPI.testControl();
+        if (result.success) {
+          testBtn.textContent = 'Mouse moved to center!';
+          setTimeout(() => {
+            testBtn.textContent = 'Test Mouse Control';
+          }, 2000);
+        } else {
+          showError(result.error || 'Test failed');
+        }
+      } catch (error) {
+        showError(error.message);
+      }
+    });
+
+    // Enter key on session code
+    sessionCodeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        connectBtn.click();
+      }
+    });
+
+    // Auto-uppercase session code
+    sessionCodeInput.addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>
