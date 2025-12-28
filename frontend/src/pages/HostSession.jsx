@@ -121,10 +121,26 @@ const SessionCodeDisplay = ({ code, onCopy, copied, onLaunchAgent, agentConnecte
             Enable mouse & keyboard control by connecting the Desktop Agent
           </p>
           
-          <div className="flex flex-col items-center gap-4">
-            <p className="text-gray-400 text-xs text-center max-w-xs">
-              First time? Download the agent from the Settings page, then enter the session code above.
-            </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
+            <motion.button
+              onClick={onLaunchAgent}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30 transition-all"
+            >
+              <FiLink className="w-5 h-5" />
+              <span>Launch Agent</span>
+            </motion.button>
+            
+            <a
+              href="https://github.com/Jayant-001/LetsClone/releases/latest/download/LetsCloneAgent-win32-x64.zip"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all"
+            >
+              <FiDownload className="w-5 h-5" />
+              <span>Download Agent</span>
+            </a>
           </div>
         </div>
       )}
