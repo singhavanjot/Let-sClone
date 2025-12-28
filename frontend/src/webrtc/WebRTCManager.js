@@ -36,17 +36,33 @@ class WebRTCManager {
    */
   async createPeerConnection(isHost = true) {
     try {
-      // Create peer connection
+      // Log ICE servers for debugging
+      console.log('Creating peer connection with ICE servers:', this.iceServers.length);
+      
+      // Create peer connection with more aggressive ICE settings
       this.peerConnection = new RTCPeerConnection({
         iceServers: this.iceServers,
-        iceCandidatePoolSize: 10
+        iceCandidatePoolSize: 10,
+        iceTransportPolicy: 'all', // Try all candidates (relay + direct)
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require'
       });
 
       // Handle ICE candidates
       this.peerConnection.onicecandidate = (event) => {
-        if (event.candidate && this.onIceCandidate) {
-          this.onIceCandidate(event.candidate);
+        if (event.candidate) {
+          console.log('ICE candidate found:', event.candidate.type, event.candidate.protocol);
+          if (this.onIceCandidate) {
+            this.onIceCandidate(event.candidate);
+          }
+        } else {
+          console.log('ICE gathering complete');
         }
+      };
+
+      // Handle ICE gathering state
+      this.peerConnection.onicegatheringstatechange = () => {
+        console.log('ICE gathering state:', this.peerConnection.iceGatheringState);
       };
 
       // Handle connection state changes
@@ -57,11 +73,25 @@ class WebRTCManager {
         if (this.onConnectionStateChange) {
           this.onConnectionStateChange(state);
         }
+        
+        // Handle failed connection
+        if (state === 'failed') {
+          console.error('WebRTC connection failed - may need TURN relay');
+        }
       };
 
-      // Handle ICE connection state changes
+      // Handle ICE connection state changes - more detailed logging
       this.peerConnection.oniceconnectionstatechange = () => {
-        console.log('ICE connection state:', this.peerConnection.iceConnectionState);
+        const state = this.peerConnection.iceConnectionState;
+        console.log('ICE connection state:', state);
+        
+        if (state === 'failed') {
+          console.error('ICE connection failed - attempting restart');
+          // Try ICE restart
+          this.restartIce();
+        } else if (state === 'disconnected') {
+          console.warn('ICE disconnected - waiting for reconnection');
+        }
       };
 
       // Handle incoming tracks (for viewer)
@@ -94,6 +124,16 @@ class WebRTCManager {
       console.error('Failed to create peer connection:', error);
       if (this.onError) this.onError(error);
       throw error;
+    }
+  }
+
+  /**
+   * Restart ICE connection
+   */
+  restartIce() {
+    if (this.peerConnection && this.peerConnection.restartIce) {
+      console.log('Restarting ICE...');
+      this.peerConnection.restartIce();
     }
   }
 

@@ -306,21 +306,53 @@ function ViewerSession() {
 
   // Connect to session
   useEffect(() => {
+    let connectionTimeout;
+    
     const connectToSession = async () => {
       if (!sessionCode || !currentDevice || !socketConnected) return;
       
       try {
-        await startViewing(sessionCode);
-        setIsConnecting(false);
+        const result = await startViewing(sessionCode);
+        if (result) {
+          setIsConnecting(false);
+          
+          // Set timeout for connection - if not connected in 30s, show error
+          connectionTimeout = setTimeout(() => {
+            if (connectionState !== 'connected') {
+              console.log('Connection timeout - no connection established');
+              toast.error('Connection timeout. Make sure the host has started screen sharing.');
+            }
+          }, 30000);
+        }
       } catch (error) {
         console.error('Failed to connect:', error);
-        toast.error('Failed to connect to session');
-        navigate('/join');
+        toast.error(error.message || 'Failed to connect to session');
+        setIsConnecting(false);
       }
     };
 
     connectToSession();
-  }, [sessionCode, currentDevice, socketConnected, startViewing, navigate]);
+    
+    return () => {
+      if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
+      }
+    };
+  }, [sessionCode, currentDevice, socketConnected, startViewing, connectionState]);
+
+  // Listen for socket errors (e.g., host not connected)
+  useEffect(() => {
+    const handleSocketError = ({ message }) => {
+      console.error('Socket error:', message);
+      toast.error(message || 'Connection error');
+      if (message?.includes('Host is not connected')) {
+        toast('Please wait for the host to start the session', { icon: '⏳' });
+      }
+    };
+
+    on('error', handleSocketError);
+    return () => off('error', handleSocketError);
+  }, [on, off]);
 
   // Handle WebRTC errors
   useEffect(() => {
@@ -413,8 +445,13 @@ function ViewerSession() {
     );
   }
 
-  // Connection failed
-  if (connectionState === 'failed' || connectionState === 'disconnected') {
+  // Connection failed - only show after we've actually tried to connect
+  // Don't show on initial 'disconnected' state
+  const hasAttemptedConnection = connectionState !== 'disconnected' || !isConnecting;
+  const connectionFailed = hasAttemptedConnection && 
+    (connectionState === 'failed' || (connectionState === 'disconnected' && !isConnecting));
+  
+  if (connectionFailed) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center glass-card p-8 max-w-md">
@@ -422,7 +459,9 @@ function ViewerSession() {
             <FiWifiOff className="w-8 h-8 text-red-400" />
           </div>
           <h2 className="text-xl font-semibold text-white mb-2">Connection Lost</h2>
-          <p className="text-gray-400 mb-6">The connection to the remote session was lost.</p>
+          <p className="text-gray-400 mb-6">
+            {webrtcError || 'The connection to the remote session was lost. Make sure the host has started screen sharing.'}
+          </p>
           <div className="flex justify-center space-x-4">
             <motion.button
               onClick={() => window.location.reload()}
