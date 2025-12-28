@@ -203,8 +203,18 @@ export function useWebRTC(isHost = false) {
       console.log('Received WebRTC offer');
       if (!isHost && webrtcRef.current) {
         try {
-          await webrtcRef.current.createPeerConnection(false);
-          setupEventHandlers();
+          // Check if we already have a peer connection in a valid state
+          const pc = webrtcRef.current.peerConnection;
+          if (pc && (pc.signalingState === 'stable' || pc.signalingState === 'have-local-offer')) {
+            console.log('Ignoring duplicate offer - already connected or connecting');
+            return;
+          }
+          
+          // Only create new peer connection if we don't have one
+          if (!pc || pc.signalingState === 'closed') {
+            await webrtcRef.current.createPeerConnection(false);
+            setupEventHandlers();
+          }
           
           const answer = await webrtcRef.current.handleOffer(offer);
           socketService.sendAnswer(sessionCodeRef.current, answer);
@@ -246,6 +256,13 @@ export function useWebRTC(isHost = false) {
       console.log('Viewer joined:', viewerEmail);
       if (isHost && webrtcRef.current) {
         try {
+          // Check if we already sent an offer
+          const pc = webrtcRef.current.peerConnection;
+          if (pc && pc.signalingState !== 'stable' && pc.signalingState !== 'closed') {
+            console.log('Ignoring duplicate viewer:joined - already negotiating');
+            return;
+          }
+          
           // Create and send offer
           const offer = await webrtcRef.current.createOffer();
           socketService.sendOffer(sessionCodeRef.current, offer);
