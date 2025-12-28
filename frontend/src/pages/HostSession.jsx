@@ -133,11 +133,22 @@ const SessionCodeDisplay = ({ code, onCopy, copied, onLaunchAgent, agentConnecte
             </motion.button>
             
             <motion.a
-              href="/downloads/LetsClone-Agent-Setup.exe"
-              download
+              href="https://github.com/user/letsclone/releases/latest/download/LetsCloneAgent-Setup.exe"
+              target="_blank"
+              rel="noopener noreferrer"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all"
+              onClick={(e) => {
+                e.preventDefault();
+                toast((t) => (
+                  <div className="text-sm">
+                    <p className="font-medium mb-2">📥 Download Desktop Agent</p>
+                    <p className="text-gray-300 mb-2">The agent is in the <code>desktop-agent</code> folder.</p>
+                    <p className="text-gray-400 text-xs">Run: <code>npm start</code> or use built .exe</p>
+                  </div>
+                ), { duration: 5000 });
+              }}
             >
               <FiDownload className="w-5 h-5" />
               <span>Download Agent</span>

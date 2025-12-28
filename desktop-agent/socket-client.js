@@ -23,15 +23,21 @@ class SocketClient extends EventEmitter {
   connect() {
     console.log(`Connecting to ${this.serverUrl}...`);
 
-    this.socket = io(this.serverUrl, {
+    // Ensure URL doesn't have trailing slash
+    const cleanUrl = this.serverUrl.replace(/\/$/, '');
+    console.log('Connecting with token:', this.token ? 'present' : 'missing');
+    
+    this.socket = io(cleanUrl, {
       auth: {
         token: this.token
       },
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      forceNew: true
     });
 
     this.setupEventHandlers();
