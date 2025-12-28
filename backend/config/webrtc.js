@@ -58,10 +58,16 @@ const getTurnServers = () => {
   
   console.log('[WebRTC Config] No custom TURN server configured, using free public servers');
   
-  // Free public TURN servers (may be unreliable)
+  // Free public TURN servers - multiple providers for reliability
   return [
+    // OpenRelay TURN servers (free, reliable)
     {
       urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
       username: 'openrelayproject',
       credential: 'openrelayproject'
     },
@@ -69,6 +75,22 @@ const getTurnServers = () => {
       urls: 'turn:openrelay.metered.ca:443?transport=tcp',
       username: 'openrelayproject',
       credential: 'openrelayproject'
+    },
+    // Metered.ca free tier (different server)
+    {
+      urls: 'turn:a.relay.metered.ca:80',
+      username: 'e8dd65b92c62d5e62f54de02',
+      credential: 'uWdWNmkhvyqTmFXB'
+    },
+    {
+      urls: 'turn:a.relay.metered.ca:443',
+      username: 'e8dd65b92c62d5e62f54de02',
+      credential: 'uWdWNmkhvyqTmFXB'
+    },
+    {
+      urls: 'turn:a.relay.metered.ca:443?transport=tcp',
+      username: 'e8dd65b92c62d5e62f54de02',
+      credential: 'uWdWNmkhvyqTmFXB'
     }
   ];
 };

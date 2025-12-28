@@ -16,6 +16,7 @@ class WebRTCManager {
     this.onDataChannelMessage = null;
     this.onConnectionStateChange = null;
     this.onIceCandidate = null;
+    this.onIceRestart = null;  // Called when ICE restart is needed
     this.onError = null;
 
     // Pending ICE candidates (received before remote description set)
@@ -87,10 +88,23 @@ class WebRTCManager {
         
         if (state === 'failed') {
           console.error('ICE connection failed - attempting restart');
-          // Try ICE restart
-          this.restartIce();
+          // Trigger ICE restart with renegotiation
+          if (this.onIceRestart) {
+            this.onIceRestart();
+          }
         } else if (state === 'disconnected') {
           console.warn('ICE disconnected - waiting for reconnection');
+          // Set a timeout to restart if still disconnected
+          setTimeout(() => {
+            if (this.peerConnection && this.peerConnection.iceConnectionState === 'disconnected') {
+              console.log('Still disconnected after timeout, triggering restart');
+              if (this.onIceRestart) {
+                this.onIceRestart();
+              }
+            }
+          }, 5000);
+        } else if (state === 'connected' || state === 'completed') {
+          console.log('ICE connection established successfully');
         }
       };
 

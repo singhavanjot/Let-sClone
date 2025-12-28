@@ -8,13 +8,48 @@ import WebRTCManager from '../webrtc/WebRTCManager';
 import { socketService } from '../services';
 import { useAuthStore, useSessionStore } from '../store';
 
-// Default ICE servers - these are fallbacks
-// The backend will provide the real TURN credentials from Metered.ca
+// Default ICE servers with TURN - these include reliable free TURN servers
+// TURN is essential for connections behind symmetric NATs
 const DEFAULT_ICE_SERVERS = [
   // STUN servers for NAT discovery
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:global.stun.twilio.com:3478' }
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:global.stun.twilio.com:3478' },
+  
+  // Free TURN servers from Open Relay Project (reliable)
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  // Metered.ca free tier TURN servers
+  {
+    urls: 'turn:a.relay.metered.ca:80',
+    username: 'e8dd65b92c62d5e62f54de02',
+    credential: 'uWdWNmkhvyqTmFXB'
+  },
+  {
+    urls: 'turn:a.relay.metered.ca:443',
+    username: 'e8dd65b92c62d5e62f54de02',
+    credential: 'uWdWNmkhvyqTmFXB'
+  },
+  {
+    urls: 'turn:a.relay.metered.ca:443?transport=tcp',
+    username: 'e8dd65b92c62d5e62f54de02',
+    credential: 'uWdWNmkhvyqTmFXB'
+  }
 ];
 export function useWebRTC(isHost = false) {
   const [connectionState, setConnectionState] = useState('disconnected');
@@ -139,6 +174,21 @@ export function useWebRTC(isHost = false) {
       }
     };
 
+    // ICE restart handler (for failed connections)
+    webrtcRef.current.onIceRestart = async () => {
+      if (isHost && webrtcRef.current && sessionCodeRef.current) {
+        try {
+          console.log('Performing ICE restart with renegotiation...');
+          // Create new offer with ICE restart flag
+          const offer = await webrtcRef.current.peerConnection.createOffer({ iceRestart: true });
+          await webrtcRef.current.peerConnection.setLocalDescription(offer);
+          socketService.sendOffer(sessionCodeRef.current, offer);
+        } catch (err) {
+          console.error('ICE restart failed:', err);
+        }
+      }
+    };
+
     // Remote stream (for viewer)
     webrtcRef.current.onRemoteStream = (stream) => {
       console.log('Received remote stream');
@@ -183,6 +233,12 @@ export function useWebRTC(isHost = false) {
           
           // Only create new peer connection if we don't have one
           if (!pc || pc.signalingState === 'closed') {
+            // Log the ICE servers being used
+            console.log('Creating viewer peer connection with', webrtcRef.current.iceServers?.length, 'ICE servers');
+            console.log('TURN servers included:', webrtcRef.current.iceServers?.filter(s => 
+              s.urls?.toString().includes('turn:') || s.urls?.toString().includes('turns:')
+            ).length);
+            
             await webrtcRef.current.createPeerConnection(false);
             setupEventHandlers();
           }
@@ -298,6 +354,12 @@ export function useWebRTC(isHost = false) {
         console.log('Screen sharing stopped by user');
         cleanup();
       };
+      
+      // Log ICE server configuration
+      console.log('Creating host peer connection with', webrtcRef.current.iceServers?.length, 'ICE servers');
+      console.log('TURN servers included:', webrtcRef.current.iceServers?.filter(s => 
+        s.urls?.toString().includes('turn:') || s.urls?.toString().includes('turns:')
+      ).length);
       
       // Create peer connection as host
       await webrtcRef.current.createPeerConnection(true);
