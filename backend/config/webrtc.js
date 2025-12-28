@@ -5,27 +5,63 @@
 
 // Get TURN credentials from environment or use free public servers
 const getTurnServers = () => {
-  // If custom TURN server is configured, use it
+  // If custom TURN server is configured, use it with multiple URL formats
   if (process.env.TURN_SERVER_URL && process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+    const username = process.env.TURN_USERNAME;
+    const credential = process.env.TURN_CREDENTIAL;
+    
+    // Extract the host from the URL (e.g., global.relay.metered.ca from turn:global.relay.metered.ca:80)
+    const urlMatch = process.env.TURN_SERVER_URL.match(/turn:([^:]+)/);
+    const host = urlMatch ? urlMatch[1] : 'global.relay.metered.ca';
+    
+    console.log(`[WebRTC Config] Using Metered.ca TURN server: ${host}`);
+    
     return [
+      // UDP on port 80 (most compatible)
       {
-        urls: process.env.TURN_SERVER_URL,
-        username: process.env.TURN_USERNAME,
-        credential: process.env.TURN_CREDENTIAL
+        urls: `turn:${host}:80`,
+        username,
+        credential
+      },
+      // UDP on port 443
+      {
+        urls: `turn:${host}:443`,
+        username,
+        credential
+      },
+      // TCP on port 443 (works through most firewalls)
+      {
+        urls: `turn:${host}:443?transport=tcp`,
+        username,
+        credential
+      },
+      // TLS/TURNS on port 443 (most secure, works through strict firewalls)
+      {
+        urls: `turns:${host}:443?transport=tcp`,
+        username,
+        credential
+      },
+      // UDP on standard TURN port
+      {
+        urls: `turn:${host}:3478`,
+        username,
+        credential
+      },
+      // TCP on standard TURN port
+      {
+        urls: `turn:${host}:3478?transport=tcp`,
+        username,
+        credential
       }
     ];
   }
   
+  console.log('[WebRTC Config] No custom TURN server configured, using free public servers');
+  
   // Free public TURN servers (may be unreliable)
   return [
-    // OpenRelay TURN servers
     {
       urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
       username: 'openrelayproject',
       credential: 'openrelayproject'
     },
@@ -33,12 +69,6 @@ const getTurnServers = () => {
       urls: 'turn:openrelay.metered.ca:443?transport=tcp',
       username: 'openrelayproject',
       credential: 'openrelayproject'
-    },
-    // Numb TURN server
-    {
-      urls: 'turn:numb.viagenie.ca',
-      username: 'webrtc@live.com',
-      credential: 'muazkh'
     }
   ];
 };
