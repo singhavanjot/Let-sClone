@@ -178,6 +178,49 @@ const initializeSocketServer = (server) => {
     });
 
     /**
+     * Reset session (host only) - kicks current viewer
+     */
+    socket.on('session:reset', async (data) => {
+      try {
+        const { sessionCode } = data;
+        
+        const sessionRoom = sessionRooms.get(sessionCode);
+        
+        if (!sessionRoom) {
+          return socket.emit('error', { message: 'Session not found' });
+        }
+        
+        // Only host can reset
+        if (socket.id !== sessionRoom.hostSocketId) {
+          return socket.emit('error', { message: 'Only host can reset session' });
+        }
+        
+        // Kick the current viewer if any
+        if (sessionRoom.viewerSocketId) {
+          const viewerSocket = io.sockets.sockets.get(sessionRoom.viewerSocketId);
+          if (viewerSocket) {
+            viewerSocket.emit('session:kicked', { message: 'Host reset the session' });
+            viewerSocket.leave(`session:${sessionCode}`);
+            viewerSocket.sessionCode = null;
+          }
+          sessionRoom.viewerSocketId = null;
+          sessionRooms.set(sessionCode, sessionRoom);
+        }
+        
+        socket.emit('session:reset-complete', {
+          sessionCode,
+          message: 'Session reset. Waiting for new viewer.'
+        });
+        
+        logger.info(`Session reset by host: ${sessionCode}`);
+        
+      } catch (error) {
+        logger.error('Session reset error:', error);
+        socket.emit('error', { message: 'Failed to reset session' });
+      }
+    });
+
+    /**
      * Join an existing session room
      */
     socket.on('session:join', async (data) => {
@@ -196,9 +239,23 @@ const initializeSocketServer = (server) => {
           return socket.emit('error', { message: 'Host is not connected. Please wait.' });
         }
         
-        // Check if viewer slot is already taken
+        // Check if viewer slot is already taken by a DIFFERENT user
         if (sessionRoom.viewerSocketId) {
-          return socket.emit('error', { message: 'Session already has a viewer' });
+          // Check if it's the same user reconnecting
+          const existingViewerSocket = io.sockets.sockets.get(sessionRoom.viewerSocketId);
+          
+          if (existingViewerSocket && existingViewerSocket.userId !== socket.userId) {
+            return socket.emit('error', { message: 'Session already has a viewer' });
+          }
+          
+          // Same user reconnecting or stale socket - allow reconnection
+          logger.info(`Viewer reconnecting to session: ${sessionCode}`);
+          
+          // Clean up old socket if it exists
+          if (existingViewerSocket) {
+            existingViewerSocket.leave(`session:${sessionCode}`);
+            existingViewerSocket.sessionCode = null;
+          }
         }
         
         // Join the session room
