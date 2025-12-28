@@ -235,7 +235,7 @@ app.whenReady().then(async () => {
   createTray();
 
   // Load saved settings
-  const savedUrl = store.get('serverUrl', 'https://lets-clone-backend.onrender.com');
+  const savedUrl = store.get('serverUrl', 'https://let-sclone.onrender.com');
   mainWindow?.webContents.on('did-finish-load', () => {
     mainWindow?.webContents.send('init-settings', { serverUrl: savedUrl });
     
