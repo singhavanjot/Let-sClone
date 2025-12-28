@@ -96,12 +96,17 @@ export function useWebRTC(isHost = false) {
       socketService.on('config', (config) => {
         console.log('Received ICE config from server:', config.iceServers?.length, 'servers');
         if (config.iceServers && webrtcRef.current) {
-          // Merge with defaults - server config takes priority
-          const mergedServers = [...DEFAULT_ICE_SERVERS, ...config.iceServers];
-          console.log('Using', mergedServers.length, 'ICE servers');
-          webrtcRef.current.setIceServers(mergedServers);
+          // Use server config (includes TURN servers)
+          console.log('Using server ICE config with TURN servers');
+          webrtcRef.current.setIceServers(config.iceServers);
         }
       });
+      
+      // Request config in case we missed the initial one
+      socketService.emit('get-config');
+      
+      // Wait a bit for config to arrive
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       return true;
     } catch (err) {

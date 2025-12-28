@@ -90,8 +90,18 @@ const initializeSocketServer = (server) => {
     });
 
     // Send WebRTC configuration to client
-    socket.emit('config', {
+    const iceConfig = {
       iceServers: webrtcConfig.iceServers
+    };
+    logger.info(`Sending ICE config with ${iceConfig.iceServers.length} servers`);
+    socket.emit('config', iceConfig);
+
+    /**
+     * Request config (for clients that missed the initial config)
+     */
+    socket.on('get-config', () => {
+      logger.info(`Config requested by ${socket.id}`);
+      socket.emit('config', iceConfig);
     });
 
     /**
