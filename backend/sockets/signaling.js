@@ -19,14 +19,32 @@ const sessionRooms = new Map();
  * @param {Object} server - HTTP server instance
  */
 const initializeSocketServer = (server) => {
+  // Get allowed origins from env or use defaults
+  const allowedOrigins = process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : ['http://localhost:5173', 'http://localhost:5174'];
+  
   const io = socketIO(server, {
     cors: {
-      origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+      origin: (origin, callback) => {
+        // Allow requests with no origin (desktop apps, curl, etc)
+        if (!origin) return callback(null, true);
+        // Allow listed origins
+        if (allowedOrigins.some(o => origin.startsWith(o) || o === '*')) {
+          return callback(null, true);
+        }
+        // Allow Vercel and Render domains
+        if (origin.includes('vercel.app') || origin.includes('onrender.com')) {
+          return callback(null, true);
+        }
+        callback(new Error('CORS not allowed'));
+      },
       methods: ['GET', 'POST'],
       credentials: true
     },
     pingTimeout: 60000,
-    pingInterval: 25000
+    pingInterval: 25000,
+    transports: ['polling', 'websocket']
   });
 
   // Authentication middleware for Socket.IO

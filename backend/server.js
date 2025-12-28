@@ -29,8 +29,26 @@ connectDB();
 
 // Security middleware
 app.use(helmet());
+
+// CORS configuration - allow desktop agent and web clients
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+  : ['http://localhost:5173', 'http://localhost:5174'];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (desktop apps, curl, etc)
+    if (!origin) return callback(null, true);
+    // Allow listed origins
+    if (allowedOrigins.some(o => origin.startsWith(o) || o === '*')) {
+      return callback(null, true);
+    }
+    // Allow Vercel and Render domains
+    if (origin.includes('vercel.app') || origin.includes('onrender.com')) {
+      return callback(null, true);
+    }
+    callback(new Error('CORS not allowed'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']

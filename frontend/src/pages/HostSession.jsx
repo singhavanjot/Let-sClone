@@ -121,38 +121,10 @@ const SessionCodeDisplay = ({ code, onCopy, copied, onLaunchAgent, agentConnecte
             Enable mouse & keyboard control by connecting the Desktop Agent
           </p>
           
-          <div className="flex flex-col sm:flex-row justify-center gap-3">
-            <motion.button
-              onClick={onLaunchAgent}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30 transition-all"
-            >
-              <FiLink className="w-5 h-5" />
-              <span>Launch Agent</span>
-            </motion.button>
-            
-            <motion.a
-              href="https://github.com/user/letsclone/releases/latest/download/LetsCloneAgent-Setup.exe"
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all"
-              onClick={(e) => {
-                e.preventDefault();
-                toast((t) => (
-                  <div className="text-sm">
-                    <p className="font-medium mb-2">📥 Download Desktop Agent</p>
-                    <p className="text-gray-300 mb-2">The agent is in the <code>desktop-agent</code> folder.</p>
-                    <p className="text-gray-400 text-xs">Run: <code>npm start</code> or use built .exe</p>
-                  </div>
-                ), { duration: 5000 });
-              }}
-            >
-              <FiDownload className="w-5 h-5" />
-              <span>Download Agent</span>
-            </motion.a>
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-gray-400 text-xs text-center max-w-xs">
+              First time? Download the agent from the Settings page, then enter the session code above.
+            </p>
           </div>
         </div>
       )}
