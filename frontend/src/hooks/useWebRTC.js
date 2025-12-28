@@ -10,47 +10,41 @@ import { useAuthStore, useSessionStore } from '../store';
 
 // Default ICE servers (including free TURN servers for NAT traversal)
 const DEFAULT_ICE_SERVERS = [
-  // Multiple STUN servers for redundancy
+  // STUN servers for NAT discovery
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun3.l.google.com:19302' },
-  { urls: 'stun:stun4.l.google.com:19302' },
-  // Xirsys free TURN servers (more reliable)
-  {
-    urls: [
-      'turn:s1.xirsys.com:80?transport=udp',
-      'turn:s1.xirsys.com:3478?transport=udp',
-      'turn:s1.xirsys.com:80?transport=tcp',
-      'turn:s1.xirsys.com:3478?transport=tcp',
-      'turns:s1.xirsys.com:443?transport=tcp',
-      'turns:s1.xirsys.com:5349?transport=tcp'
-    ],
-    username: 'letsclone',
-    credential: 'letsclone123'
-  },
-  // Twilio free STUN
   { urls: 'stun:global.stun.twilio.com:3478' },
-  // Metered.ca free TURN servers
+  
+  // Free TURN servers from OpenRelay (actually working)
   {
-    urls: 'turn:a.relay.metered.ca:80',
-    username: 'e8dd65c92f6d45f6b3c87f87',
-    credential: 'l8mBXDlwQ/vFxVXd'
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
   },
   {
-    urls: 'turn:a.relay.metered.ca:80?transport=tcp',
-    username: 'e8dd65c92f6d45f6b3c87f87',
-    credential: 'l8mBXDlwQ/vFxVXd'
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
   },
   {
-    urls: 'turn:a.relay.metered.ca:443',
-    username: 'e8dd65c92f6d45f6b3c87f87',
-    credential: 'l8mBXDlwQ/vFxVXd'
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
   },
+  
+  // Numb TURN server (free, working)
   {
-    urls: 'turns:a.relay.metered.ca:443?transport=tcp',
-    username: 'e8dd65c92f6d45f6b3c87f87',
-    credential: 'l8mBXDlwQ/vFxVXd'
+    urls: 'turn:numb.viagenie.ca',
+    username: 'webrtc@live.com',
+    credential: 'muazkh'
+  },
+  
+  // FreeSWITCH community TURN
+  {
+    urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
+    username: 'webrtc',
+    credential: 'webrtc'
   }
 ];
 
