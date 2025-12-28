@@ -399,6 +399,36 @@ const initializeSocketServer = (server) => {
     });
 
     /**
+     * Handle ICE restart request from viewer
+     * Forward to host to create a new offer with iceRestart flag
+     */
+    socket.on('request-ice-restart', async (data) => {
+      try {
+        const { sessionCode } = data;
+        
+        const sessionRoom = sessionRooms.get(sessionCode);
+        
+        if (!sessionRoom) {
+          return socket.emit('error', { message: 'Session not found' });
+        }
+        
+        // Only viewer can request ICE restart
+        if (socket.id !== sessionRoom.viewerSocketId) {
+          return;
+        }
+        
+        // Forward request to host
+        logger.info(`ICE restart requested by viewer in session: ${sessionCode}`);
+        io.to(sessionRoom.hostSocketId).emit('ice-restart-requested', {
+          sessionCode
+        });
+        
+      } catch (error) {
+        logger.error('ICE restart request error:', error);
+      }
+    });
+
+    /**
      * WebRTC connection state change
      */
     socket.on('webrtc:connection-state', async (data) => {

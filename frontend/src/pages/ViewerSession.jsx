@@ -304,12 +304,25 @@ function ViewerSession() {
     return () => off('control-mode-change', handleControlModeChange);
   }, [on, off]);
 
-  // Connect to session
+  // Track if we've already attempted connection
+  const hasAttemptedRef = useRef(false);
+  const connectionTimeoutRef = useRef(null);
+
+  // Connect to session - only once
   useEffect(() => {
-    let connectionTimeout;
-    
     const connectToSession = async () => {
-      if (!sessionCode || !currentDevice || !socketConnected) return;
+      // Prevent multiple connection attempts
+      if (hasAttemptedRef.current) {
+        console.log('Already attempted connection, skipping');
+        return;
+      }
+      
+      if (!sessionCode || !currentDevice || !socketConnected) {
+        return;
+      }
+      
+      hasAttemptedRef.current = true;
+      console.log('Attempting to connect to session:', sessionCode);
       
       try {
         const result = await startViewing(sessionCode);
@@ -317,28 +330,27 @@ function ViewerSession() {
           setIsConnecting(false);
           
           // Set timeout for connection - if not connected in 30s, show error
-          connectionTimeout = setTimeout(() => {
-            if (connectionState !== 'connected') {
-              console.log('Connection timeout - no connection established');
-              toast.error('Connection timeout. Make sure the host has started screen sharing.');
-            }
+          connectionTimeoutRef.current = setTimeout(() => {
+            console.log('Connection timeout - no connection established');
+            toast.error('Connection timeout. The host may not be sharing their screen or network restrictions are blocking the connection.');
           }, 30000);
         }
       } catch (error) {
         console.error('Failed to connect:', error);
         toast.error(error.message || 'Failed to connect to session');
         setIsConnecting(false);
+        hasAttemptedRef.current = false; // Allow retry on error
       }
     };
 
     connectToSession();
     
     return () => {
-      if (connectionTimeout) {
-        clearTimeout(connectionTimeout);
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
       }
     };
-  }, [sessionCode, currentDevice, socketConnected, startViewing, connectionState]);
+  }, [sessionCode, currentDevice, socketConnected, startViewing]);
 
   // Listen for socket errors (e.g., host not connected)
   useEffect(() => {

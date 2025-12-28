@@ -8,35 +8,25 @@ import WebRTCManager from '../webrtc/WebRTCManager';
 import { socketService } from '../services';
 import { useAuthStore, useSessionStore } from '../store';
 
-// Default ICE servers with TURN - these include reliable free TURN servers
-// TURN is essential for connections behind symmetric NATs
+// Default ICE servers with TURN - TURN is essential for connections behind symmetric NATs
+// Using multiple reliable free TURN server providers for redundancy
 const DEFAULT_ICE_SERVERS = [
-  // STUN servers for NAT discovery
+  // STUN servers for NAT discovery (fast, reliable)
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
   { urls: 'stun:stun3.l.google.com:19302' },
-  { urls: 'stun:global.stun.twilio.com:3478' },
+  { urls: 'stun:stun4.l.google.com:19302' },
   
-  // Free TURN servers from Open Relay Project (reliable)
-  {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  // Metered.ca free tier TURN servers
+  // Metered.ca free TURN servers (500GB/month free)
+  // These are the most reliable free TURN servers
   {
     urls: 'turn:a.relay.metered.ca:80',
+    username: 'e8dd65b92c62d5e62f54de02',
+    credential: 'uWdWNmkhvyqTmFXB'
+  },
+  {
+    urls: 'turn:a.relay.metered.ca:80?transport=tcp',
     username: 'e8dd65b92c62d5e62f54de02',
     credential: 'uWdWNmkhvyqTmFXB'
   },
@@ -49,6 +39,22 @@ const DEFAULT_ICE_SERVERS = [
     urls: 'turn:a.relay.metered.ca:443?transport=tcp',
     username: 'e8dd65b92c62d5e62f54de02',
     credential: 'uWdWNmkhvyqTmFXB'
+  },
+  {
+    urls: 'turns:a.relay.metered.ca:443?transport=tcp',
+    username: 'e8dd65b92c62d5e62f54de02',
+    credential: 'uWdWNmkhvyqTmFXB'
+  },
+  // OpenRelay fallback TURN servers
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
   }
 ];
 export function useWebRTC(isHost = false) {
@@ -99,6 +105,7 @@ export function useWebRTC(isHost = false) {
     socketService.off('peer:disconnected');
     socketService.off('session:ended');
     socketService.off('config');
+    socketService.off('ice-restart-requested');
 
     // Reset state
     setLocalStream(null);
@@ -176,13 +183,19 @@ export function useWebRTC(isHost = false) {
 
     // ICE restart handler (for failed connections)
     webrtcRef.current.onIceRestart = async () => {
-      if (isHost && webrtcRef.current && sessionCodeRef.current) {
+      if (webrtcRef.current && sessionCodeRef.current) {
         try {
-          console.log('Performing ICE restart with renegotiation...');
-          // Create new offer with ICE restart flag
-          const offer = await webrtcRef.current.peerConnection.createOffer({ iceRestart: true });
-          await webrtcRef.current.peerConnection.setLocalDescription(offer);
-          socketService.sendOffer(sessionCodeRef.current, offer);
+          if (isHost) {
+            console.log('Host: Performing ICE restart with renegotiation...');
+            // Create new offer with ICE restart flag
+            const offer = await webrtcRef.current.peerConnection.createOffer({ iceRestart: true });
+            await webrtcRef.current.peerConnection.setLocalDescription(offer);
+            socketService.sendOffer(sessionCodeRef.current, offer);
+          } else {
+            console.log('Viewer: Requesting ICE restart from host...');
+            // Viewer requests host to restart ICE
+            socketService.emit('request-ice-restart', { sessionCode: sessionCodeRef.current });
+          }
         } catch (err) {
           console.error('ICE restart failed:', err);
         }
@@ -309,6 +322,21 @@ export function useWebRTC(isHost = false) {
         setConnectionState('disconnected');
       } else {
         console.log('Viewer disconnected');
+      }
+    });
+
+    // Handle ICE restart request from viewer (host only)
+    socketService.on('ice-restart-requested', async () => {
+      console.log('Received ICE restart request from viewer');
+      if (isHost && webrtcRef.current && sessionCodeRef.current) {
+        try {
+          console.log('Host: Performing ICE restart...');
+          const offer = await webrtcRef.current.peerConnection.createOffer({ iceRestart: true });
+          await webrtcRef.current.peerConnection.setLocalDescription(offer);
+          socketService.sendOffer(sessionCodeRef.current, offer);
+        } catch (err) {
+          console.error('ICE restart from request failed:', err);
+        }
       }
     });
 

@@ -83,12 +83,23 @@ const getTurnServers = () => {
       credential: 'uWdWNmkhvyqTmFXB'
     },
     {
+      urls: 'turn:a.relay.metered.ca:80?transport=tcp',
+      username: 'e8dd65b92c62d5e62f54de02',
+      credential: 'uWdWNmkhvyqTmFXB'
+    },
+    {
       urls: 'turn:a.relay.metered.ca:443',
       username: 'e8dd65b92c62d5e62f54de02',
       credential: 'uWdWNmkhvyqTmFXB'
     },
     {
       urls: 'turn:a.relay.metered.ca:443?transport=tcp',
+      username: 'e8dd65b92c62d5e62f54de02',
+      credential: 'uWdWNmkhvyqTmFXB'
+    },
+    // TURNS (TLS) - works through strict firewalls
+    {
+      urls: 'turns:a.relay.metered.ca:443?transport=tcp',
       username: 'e8dd65b92c62d5e62f54de02',
       credential: 'uWdWNmkhvyqTmFXB'
     }
