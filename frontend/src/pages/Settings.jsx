@@ -352,7 +352,7 @@ function Settings() {
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <a
-                    href="https://github.com/singhavanjot/Let-sClone/releases/latest/download/LetsCloneAgent-win32-x64.zip"
+                    href="https://github.com/singhavanjot/Let-sClone/releases/download/v1.0.0/LetsCloneAgent-win32-x64.zip"
                     className="inline-flex items-center space-x-2 px-4 py-2 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg text-sm transition-colors border border-purple-500/30"
                   >
                     <FiDownload className="w-4 h-4" />
