@@ -8,46 +8,14 @@ import WebRTCManager from '../webrtc/WebRTCManager';
 import { socketService } from '../services';
 import { useAuthStore, useSessionStore } from '../store';
 
-// Default ICE servers (including free TURN servers for NAT traversal)
+// Default ICE servers - these are fallbacks
+// The backend will provide the real TURN credentials from Metered.ca
 const DEFAULT_ICE_SERVERS = [
   // STUN servers for NAT discovery
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:global.stun.twilio.com:3478' },
-  
-  // Free TURN servers from OpenRelay (actually working)
-  {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  
-  // Numb TURN server (free, working)
-  {
-    urls: 'turn:numb.viagenie.ca',
-    username: 'webrtc@live.com',
-    credential: 'muazkh'
-  },
-  
-  // FreeSWITCH community TURN
-  {
-    urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
-    username: 'webrtc',
-    credential: 'webrtc'
-  }
+  { urls: 'stun:global.stun.twilio.com:3478' }
 ];
-
 export function useWebRTC(isHost = false) {
   const [connectionState, setConnectionState] = useState('disconnected');
   const [localStream, setLocalStream] = useState(null);
@@ -124,10 +92,14 @@ export function useWebRTC(isHost = false) {
       // Set default ICE servers immediately
       webrtcRef.current.setIceServers(DEFAULT_ICE_SERVERS);
 
-      // Listen for config from server (may override defaults)
+      // Listen for config from server (includes TURN credentials)
       socketService.on('config', (config) => {
+        console.log('Received ICE config from server:', config.iceServers?.length, 'servers');
         if (config.iceServers && webrtcRef.current) {
-          webrtcRef.current.setIceServers(config.iceServers);
+          // Merge with defaults - server config takes priority
+          const mergedServers = [...DEFAULT_ICE_SERVERS, ...config.iceServers];
+          console.log('Using', mergedServers.length, 'ICE servers');
+          webrtcRef.current.setIceServers(mergedServers);
         }
       });
       
