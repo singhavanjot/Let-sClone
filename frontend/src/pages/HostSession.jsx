@@ -133,7 +133,7 @@ const SessionCodeDisplay = ({ code, onCopy, copied, onLaunchAgent, agentConnecte
             </motion.button>
             
             <a
-              href="https://github.com/Jayant-001/LetsClone/releases/latest/download/LetsCloneAgent-win32-x64.zip"
+              href="https://github.com/singhavanjot/Let-sClone/releases/latest/download/LetsCloneAgent-win32-x64.zip"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all"
