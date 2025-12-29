@@ -131,24 +131,42 @@ export function useWebRTC(isHost = false) {
         webrtcRef.current = new WebRTCManager();
       }
       
-      // Set default ICE servers immediately
+      // Set default ICE servers immediately as fallback
       webrtcRef.current.setIceServers(DEFAULT_ICE_SERVERS);
 
-      // Listen for config from server (includes TURN credentials)
-      socketService.on('config', (config) => {
-        console.log('Received ICE config from server:', config.iceServers?.length, 'servers');
-        if (config.iceServers && webrtcRef.current) {
-          // Use server config (includes TURN servers)
-          console.log('Using server ICE config with TURN servers');
-          webrtcRef.current.setIceServers(config.iceServers);
-        }
+      // Return a promise that resolves when config is received or timeout occurs
+      await new Promise((resolve) => {
+        let resolved = false;
+        
+        const handleConfig = (config) => {
+          if (resolved) return;
+          resolved = true;
+          
+          console.log('Received ICE config from server:', config.iceServers?.length, 'servers');
+          if (config.iceServers && webrtcRef.current) {
+            // Use server config (includes TURN servers)
+            console.log('Using server ICE config with TURN servers');
+            webrtcRef.current.setIceServers(config.iceServers);
+          }
+          resolve();
+        };
+
+        // Listen for config from server
+        socketService.once('config', handleConfig);
+        
+        // Request config
+        socketService.emit('get-config');
+        
+        // Timeout after 3 seconds, continue with defaults
+        setTimeout(() => {
+          if (!resolved) {
+            console.warn('ICE config timeout - continuing with default servers');
+            resolved = true;
+            socketService.off('config', handleConfig);
+            resolve();
+          }
+        }, 3000);
       });
-      
-      // Request config in case we missed the initial one
-      socketService.emit('get-config');
-      
-      // Wait a bit for config to arrive
-      await new Promise(resolve => setTimeout(resolve, 500));
       
       return true;
     } catch (err) {
