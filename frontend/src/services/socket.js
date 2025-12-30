@@ -199,6 +199,24 @@ class SocketService {
   }
 
   /**
+   * Subscribe to an event once
+   * @param {string} event - Event name
+   * @param {Function} handler - Event handler
+   */
+  once(event, handler) {
+    if (!this.socket) {
+      console.warn('Socket not initialized');
+      return;
+    }
+
+    // Store handler for cleanup (optional, but consistent with 'on')
+    // For 'once', socket.io handles removal, but we might want to track it if we want to support manual removal before it fires.
+    // However, simplest fix for now is just delegation.
+
+    this.socket.once(event, handler);
+  }
+
+  /**
    * Unsubscribe from an event
    * @param {string} event - Event name
    * @param {Function} handler - Event handler (optional, removes all if not provided)
