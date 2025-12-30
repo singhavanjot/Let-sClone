@@ -59,8 +59,21 @@ const getTurnServers = () => {
   console.log('[WebRTC Config] No custom TURN server configured, using free public servers');
   
   // Free public TURN servers - multiple providers for reliability
+  // IMPORTANT: If these stop working, get your own at https://www.metered.ca/stun-turn
   return [
-    // OpenRelay TURN servers (free, reliable)
+    // ExpressTURN free public TURN servers (most reliable)
+    {
+      urls: 'turn:relay1.expressturn.com:3478',
+      username: 'efGWAMG5A9QYLLYZXL',
+      credential: 'XuaGWYswaREHqCmm'
+    },
+    {
+      urls: 'turn:relay1.expressturn.com:3478?transport=tcp',
+      username: 'efGWAMG5A9QYLLYZXL',
+      credential: 'XuaGWYswaREHqCmm'
+    },
+    
+    // OpenRelay TURN servers (free, community maintained)
     {
       urls: 'turn:openrelay.metered.ca:80',
       username: 'openrelayproject',
@@ -76,24 +89,25 @@ const getTurnServers = () => {
       username: 'openrelayproject',
       credential: 'openrelayproject'
     },
-    // Metered.ca free tier (different server)
+    {
+      urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    
+    // Metered.ca free tier - may have rate limits
     {
       urls: 'turn:a.relay.metered.ca:80',
       username: 'e8dd65b92c62d5e62f54de02',
       credential: 'uWdWNmkhvyqTmFXB'
     },
     {
-      urls: 'turn:a.relay.metered.ca:80?transport=tcp',
-      username: 'e8dd65b92c62d5e62f54de02',
-      credential: 'uWdWNmkhvyqTmFXB'
-    },
-    {
-      urls: 'turn:a.relay.metered.ca:443',
-      username: 'e8dd65b92c62d5e62f54de02',
-      credential: 'uWdWNmkhvyqTmFXB'
-    },
-    {
       urls: 'turn:a.relay.metered.ca:443?transport=tcp',
+      username: 'e8dd65b92c62d5e62f54de02',
+      credential: 'uWdWNmkhvyqTmFXB'
+    },
+    {
+      urls: 'turns:a.relay.metered.ca:443?transport=tcp',
       username: 'e8dd65b92c62d5e62f54de02',
       credential: 'uWdWNmkhvyqTmFXB'
     },

@@ -27,3 +27,10 @@ services:
         value: 14400000
       - key: SESSION_CODE_LENGTH
         value: 6
+      # TURN Server Configuration (get free credentials at https://www.metered.ca/stun-turn)
+      - key: TURN_SERVER_URL
+        sync: false  # Set to your TURN server URL, e.g., turn:global.relay.metered.ca:80
+      - key: TURN_USERNAME
+        sync: false  # Your TURN username
+      - key: TURN_CREDENTIAL
+        sync: false  # Your TURN credential/password

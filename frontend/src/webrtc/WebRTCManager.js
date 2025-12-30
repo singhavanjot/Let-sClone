@@ -49,15 +49,30 @@ class WebRTCManager {
         rtcpMuxPolicy: 'require'
       });
 
+      // Track candidate types for debugging
+      let candidateCounts = { host: 0, srflx: 0, relay: 0, prflx: 0 };
+
       // Handle ICE candidates
       this.peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log('ICE candidate found:', event.candidate.type, event.candidate.protocol);
+          const candidateType = event.candidate.type || 'unknown';
+          candidateCounts[candidateType] = (candidateCounts[candidateType] || 0) + 1;
+          
+          // Log relay candidates specially - these are critical for cross-network connections
+          if (candidateType === 'relay') {
+            console.log('✅ RELAY candidate found (TURN working):', event.candidate.protocol, event.candidate.address);
+          } else {
+            console.log('ICE candidate found:', candidateType, event.candidate.protocol);
+          }
+          
           if (this.onIceCandidate) {
             this.onIceCandidate(event.candidate);
           }
         } else {
-          console.log('ICE gathering complete');
+          console.log('ICE gathering complete. Candidates:', candidateCounts);
+          if (candidateCounts.relay === 0) {
+            console.warn('⚠️ NO RELAY CANDIDATES FOUND! TURN servers may not be working. Cross-network connections will fail.');
+          }
         }
       };
 

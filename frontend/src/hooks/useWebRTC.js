@@ -9,7 +9,8 @@ import { socketService } from '../services';
 import { useAuthStore, useSessionStore } from '../store';
 
 // Default ICE servers with TURN - TURN is essential for connections behind symmetric NATs
-// Using multiple reliable free TURN server providers for redundancy
+// IMPORTANT: If connections fail across different networks, you need working TURN servers
+// Get free TURN credentials at: https://www.metered.ca/stun-turn (500GB/month free)
 const DEFAULT_ICE_SERVERS = [
   // STUN servers for NAT discovery (fast, reliable)
   { urls: 'stun:stun.l.google.com:19302' },
@@ -18,20 +19,43 @@ const DEFAULT_ICE_SERVERS = [
   { urls: 'stun:stun3.l.google.com:19302' },
   { urls: 'stun:stun4.l.google.com:19302' },
   
-  // Metered.ca free TURN servers (500GB/month free)
-  // These are the most reliable free TURN servers
+  // ExpressTURN free public TURN servers
+  {
+    urls: 'turn:relay1.expressturn.com:3478',
+    username: 'efGWAMG5A9QYLLYZXL',
+    credential: 'XuaGWYswaREHqCmm'
+  },
+  {
+    urls: 'turn:relay1.expressturn.com:3478?transport=tcp',
+    username: 'efGWAMG5A9QYLLYZXL',
+    credential: 'XuaGWYswaREHqCmm'
+  },
+  
+  // OpenRelay TURN servers (free, community maintained)
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  
+  // Metered.ca free tier - may have rate limits
   {
     urls: 'turn:a.relay.metered.ca:80',
-    username: 'e8dd65b92c62d5e62f54de02',
-    credential: 'uWdWNmkhvyqTmFXB'
-  },
-  {
-    urls: 'turn:a.relay.metered.ca:80?transport=tcp',
-    username: 'e8dd65b92c62d5e62f54de02',
-    credential: 'uWdWNmkhvyqTmFXB'
-  },
-  {
-    urls: 'turn:a.relay.metered.ca:443',
     username: 'e8dd65b92c62d5e62f54de02',
     credential: 'uWdWNmkhvyqTmFXB'
   },
@@ -44,19 +68,11 @@ const DEFAULT_ICE_SERVERS = [
     urls: 'turns:a.relay.metered.ca:443?transport=tcp',
     username: 'e8dd65b92c62d5e62f54de02',
     credential: 'uWdWNmkhvyqTmFXB'
-  },
-  // OpenRelay fallback TURN servers
-  {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
   }
 ];
+
+// Log TURN server count for debugging
+console.log(`[WebRTC] Configured ${DEFAULT_ICE_SERVERS.length} ICE servers (${DEFAULT_ICE_SERVERS.filter(s => s.urls?.toString().includes('turn')).length} TURN servers)`);
 export function useWebRTC(isHost = false) {
   const [connectionState, setConnectionState] = useState('disconnected');
   const [localStream, setLocalStream] = useState(null);
