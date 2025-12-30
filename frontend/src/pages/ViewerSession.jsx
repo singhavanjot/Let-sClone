@@ -51,11 +51,14 @@ const InteractiveRemoteScreen = ({
   onMouseEvent, 
   onKeyEvent, 
   controlEnabled,
-  hostAllowsControl 
+  hostAllowsControl,
+  isFullscreen 
 }) => {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const [videoSize, setVideoSize] = useState({ width: 1920, height: 1080 });
+  const lastMouseMoveRef = useRef(0);
+  const MOUSE_MOVE_THROTTLE = 16; // ~60fps throttle for mouse move events
 
   // Attach stream to video
   useEffect(() => {
@@ -64,7 +67,7 @@ const InteractiveRemoteScreen = ({
     }
   }, [stream]);
 
-  // Get relative coordinates
+  // Get relative coordinates with video dimensions for proper host-side mapping
   const getRelativeCoords = useCallback((e) => {
     if (!containerRef.current || !videoRef.current) return null;
     
@@ -73,22 +76,36 @@ const InteractiveRemoteScreen = ({
     const y = e.clientY - rect.top;
     
     // Convert to relative coordinates (0-1)
-    const relX = x / rect.width;
-    const relY = y / rect.height;
+    const relX = Math.max(0, Math.min(1, x / rect.width));
+    const relY = Math.max(0, Math.min(1, y / rect.height));
     
     // Convert to video coordinates
     const videoX = Math.round(relX * videoSize.width);
     const videoY = Math.round(relY * videoSize.height);
     
-    return { x: videoX, y: videoY, relX, relY };
+    // Include video dimensions for host-side coordinate mapping
+    return { 
+      x: videoX, 
+      y: videoY, 
+      relX, 
+      relY,
+      videoWidth: videoSize.width,
+      videoHeight: videoSize.height
+    };
   }, [videoSize]);
 
-  // Mouse handlers
+  // Mouse handlers with throttling for move events
   const handleMouseMove = useCallback((e) => {
     if (!controlEnabled || !hostAllowsControl) return;
+    
+    // Throttle mouse move events to ~60fps
+    const now = Date.now();
+    if (now - lastMouseMoveRef.current < MOUSE_MOVE_THROTTLE) return;
+    lastMouseMoveRef.current = now;
+    
     const coords = getRelativeCoords(e);
     if (coords) {
-      onMouseEvent?.({ type: 'mousemove', ...coords, timestamp: Date.now() });
+      onMouseEvent?.({ type: 'mousemove', ...coords, timestamp: now });
     }
   }, [controlEnabled, hostAllowsControl, getRelativeCoords, onMouseEvent]);
 
@@ -205,14 +222,21 @@ const InteractiveRemoteScreen = ({
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      setVideoSize({
-        width: videoRef.current.videoWidth || 1920,
-        height: videoRef.current.videoHeight || 1080
-      });
+      const width = videoRef.current.videoWidth || 1920;
+      const height = videoRef.current.videoHeight || 1080;
+      console.log(`Video stream size: ${width}x${height}`);
+      setVideoSize({ width, height });
     }
   };
 
   const isInteractive = controlEnabled && hostAllowsControl;
+
+  // Focus the container when interactive to capture keyboard events
+  useEffect(() => {
+    if (isInteractive && containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, [isInteractive]);
 
   return (
     <div 
@@ -260,6 +284,8 @@ function ViewerSession() {
   const [hostAllowsControl, setHostAllowsControl] = useState(true); // Host's control mode
   const [isConnecting, setIsConnecting] = useState(true);
   const [stats, setStats] = useState({});
+  
+  const screenContainerRef = useRef(null);
   
   const { currentDevice, getOrCreateDevice } = useDeviceStore();
   const { leaveSession } = useSessionStore();
@@ -399,21 +425,35 @@ function ViewerSession() {
     }
   }, [endConnection, leaveSession, sessionCode, navigate]);
 
-  // Fullscreen toggle
-  const toggleFullscreen = () => {
-    const elem = document.documentElement;
+  // Fullscreen toggle - uses screen container for proper fullscreen
+  const toggleFullscreen = useCallback(async () => {
+    const elem = screenContainerRef.current;
+    if (!elem) return;
     
-    if (!isFullscreen) {
-      if (elem.requestFullscreen) {
-        elem.requestFullscreen();
+    try {
+      if (!document.fullscreenElement) {
+        await elem.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
       }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
+    } catch (error) {
+      console.error('Fullscreen error:', error);
     }
-    setIsFullscreen(!isFullscreen);
-  };
+  }, []);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   // Control event handlers
   const handleMouseEvent = useCallback((event) => {
@@ -605,14 +645,49 @@ function ViewerSession() {
             </div>
             
             {/* Remote Screen */}
-            <div className="screen-preview aspect-video relative">
+            <div 
+              ref={screenContainerRef}
+              className={`screen-preview relative ${isFullscreen ? 'fixed inset-0 z-50 bg-black' : 'aspect-video'}`}
+            >
               <InteractiveRemoteScreen
                 stream={remoteStream}
                 onMouseEvent={handleMouseEvent}
                 onKeyEvent={handleKeyEvent}
                 controlEnabled={controlEnabled}
                 hostAllowsControl={hostAllowsControl}
+                isFullscreen={isFullscreen}
               />
+              
+              {/* Fullscreen exit button overlay */}
+              {isFullscreen && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute top-4 right-4 flex items-center space-x-2 opacity-0 hover:opacity-100 transition-opacity duration-300"
+                  style={{ opacity: 0.3 }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.3'}
+                >
+                  <motion.button
+                    onClick={toggleFullscreen}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="p-2 rounded-lg bg-black/50 hover:bg-black/80 text-white transition-all backdrop-blur-sm"
+                    title="Exit Fullscreen (ESC)"
+                  >
+                    <FiMinimize2 className="w-5 h-5" />
+                  </motion.button>
+                  <motion.button
+                    onClick={handleDisconnect}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="p-2 rounded-lg bg-red-500/50 hover:bg-red-500/80 text-white transition-all backdrop-blur-sm"
+                    title="Disconnect"
+                  >
+                    <FiX className="w-5 h-5" />
+                  </motion.button>
+                </motion.div>
+              )}
               
               {controlEnabled && hostAllowsControl && connectionState === 'connected' && (
                 <motion.div

@@ -467,13 +467,19 @@ export function useWebRTC(isHost = false) {
   /**
    * Send control event (viewer only)
    */
+  /**
+   * Send control event (viewer only)
+   */
   const sendControlEvent = useCallback((event) => {
+    // Try data channel first for lower latency
     if (!isHost && webrtcRef.current?.isDataChannelOpen?.()) {
+      console.log('Sending control event via data channel:', event.type);
       return webrtcRef.current.sendControlEvent(event);
     }
     
     // Fall back to socket for control events
     if (sessionCodeRef.current) {
+      console.log('Sending control event via socket:', event.type);
       socketService.sendControlEvent(sessionCodeRef.current, event);
     }
     return true;
