@@ -1,82 +1,16 @@
+/**
+ * Login Page - Chrome Remote Desktop Style
+ */
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FiMail, FiLock, FiArrowRight, FiZap, FiShield, FiGlobe, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiMail, FiLock, FiArrowRight, FiWifi, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuthStore } from '../store';
-import { FloatingTechDoodles } from '../components';
 import toast from 'react-hot-toast';
-
-// Animated Background Grid
-const AnimatedGrid = () => (
-  <div className="absolute inset-0 overflow-hidden">
-    <div className="grid-3d" />
-    <div className="orb orb-1" />
-    <div className="orb orb-2" />
-  </div>
-);
-
-// Feature Item
-const FeatureItem = ({ icon: Icon, title, delay }) => (
-  <motion.div
-    className="flex items-center gap-4"
-    initial={{ opacity: 0, x: -30 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ duration: 0.5, delay }}
-  >
-    <motion.div 
-      className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center"
-      whileHover={{ scale: 1.1, rotate: 5 }}
-    >
-      <Icon className="text-cyan-400 text-xl" />
-    </motion.div>
-    <span className="text-white font-medium">{title}</span>
-  </motion.div>
-);
-
-// Modern Input Component
-const CyberInput = ({ label, type = 'text', value, onChange, placeholder, icon: Icon, rightElement, error }) => (
-  <div className="space-y-2">
-    {label && (
-      <label className="block text-sm font-medium text-cyan-400/80">{label}</label>
-    )}
-    <div className="relative group">
-      {Icon && (
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-cyan-400 transition-colors z-10">
-          <Icon className="w-5 h-5" />
-        </div>
-      )}
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        className={`
-          w-full py-3.5 px-4 ${Icon ? 'pl-12' : ''} ${rightElement ? 'pr-12' : ''}
-          bg-[#0a0a15] 
-          border-2 ${error ? 'border-red-500/50' : 'border-cyan-500/20'}
-          rounded-xl 
-          text-white 
-          placeholder-gray-600
-          outline-none
-          transition-all duration-300
-          focus:border-cyan-500/60
-          focus:shadow-[0_0_20px_rgba(0,240,255,0.15)]
-          hover:border-cyan-500/40
-        `}
-      />
-      {rightElement && (
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10">
-          {rightElement}
-        </div>
-      )}
-    </div>
-    {error && <p className="text-red-400 text-sm">{error}</p>}
-  </div>
-);
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, isLoading, error: storeError } = useAuthStore();
+  const { login, isLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -102,204 +36,96 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#050508] relative overflow-hidden">
-      <AnimatedGrid />
-      <FloatingTechDoodles count={25} opacity={0.12} />
-
-      {/* Left Side - Branding */}
-      <motion.div 
-        className="hidden lg:flex flex-col justify-center w-1/2 p-12 relative z-10"
-        initial={{ opacity: 0, x: -50 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.8 }}
-      >
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1a1a2e] to-[#16213e] p-4">
+      <div className="w-full max-w-md">
         {/* Logo */}
-        <motion.div 
-          className="flex items-center gap-4 mb-12"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <motion.div
-            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center"
-            whileHover={{ rotate: 180 }}
-            transition={{ duration: 0.5 }}
-          >
-            <FiZap className="text-white text-3xl" />
-          </motion.div>
-          <div>
-            <h1 className="font-display font-bold text-3xl text-white">Let'sClone</h1>
-            <p className="text-cyan-400">Remote Desktop</p>
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#4285f4] to-[#34a853] flex items-center justify-center">
+            <FiWifi className="w-8 h-8 text-white" />
           </div>
-        </motion.div>
-
-        {/* Tagline */}
-        <motion.h2
-          className="text-5xl font-bold mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          <span className="text-white">Control </span>
-          <span className="gradient-text font-display">Anywhere</span>
-          <br />
-          <span className="text-white">Connect </span>
-          <span className="text-glow text-cyan-400 font-display">Anytime</span>
-        </motion.h2>
-
-        <motion.p
-          className="text-gray-400 text-lg mb-12 max-w-md"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
-          Experience seamless remote desktop access with military-grade encryption and lightning-fast connections.
-        </motion.p>
-
-        {/* Features */}
-        <div className="space-y-6">
-          <FeatureItem icon={FiShield} title="End-to-End Encryption" delay={0.5} />
-          <FeatureItem icon={FiZap} title="Ultra-Low Latency" delay={0.6} />
-          <FeatureItem icon={FiGlobe} title="Global Access Network" delay={0.7} />
+          <h1 className="text-2xl font-bold text-white">Let'\''sClone</h1>
+          <p className="text-[#a0a0b0] text-sm">Remote Desktop</p>
         </div>
-      </motion.div>
 
-      {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative z-10">
-        <motion.div
-          className="w-full max-w-md"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          {/* Mobile Logo */}
-          <motion.div 
-            className="lg:hidden flex items-center justify-center gap-3 mb-10"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center">
-              <FiZap className="text-white text-xl" />
+        {/* Login Card */}
+        <div className="bg-[#1f1f3a] border border-[#2d2d4a] rounded-2xl p-8">
+          <h2 className="text-xl font-semibold text-white text-center mb-2">Welcome back</h2>
+          <p className="text-[#6b6b7b] text-center mb-6">Sign in to continue</p>
+
+          {error && (
+            <div className="mb-4 p-3 bg-[#ea4335]/10 border border-[#ea4335]/30 rounded-lg text-[#ea4335] text-sm">
+              {error}
             </div>
-            <h1 className="font-display font-bold text-2xl text-white">Let'sClone</h1>
-          </motion.div>
+          )}
 
-          <div className="glass-card p-8">
-            <motion.div 
-              className="text-center mb-8"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-            >
-              <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>
-              <p className="text-gray-400">Sign in to access your control center</p>
-            </motion.div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Email Input */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.5 }}
-              >
-                <CyberInput
-                  label="Email Address"
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div>
+              <label className="block text-sm text-[#a0a0b0] mb-2">Email</label>
+              <div className="relative">
+                <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6b6b7b]" />
+                <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  icon={FiMail}
+                  placeholder="Enter your email"
+                  className="w-full py-3 pl-12 pr-4 bg-[#16213e] border border-[#2d2d4a] rounded-lg text-white placeholder-[#6b6b7b] focus:border-[#4285f4] focus:outline-none transition-colors"
                 />
-              </motion.div>
+              </div>
+            </div>
 
-              {/* Password Input */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.6 }}
-              >
-                <CyberInput
-                  label="Password"
+            {/* Password */}
+            <div>
+              <label className="block text-sm text-[#a0a0b0] mb-2">Password</label>
+              <div className="relative">
+                <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6b6b7b]" />
+                <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  icon={FiLock}
-                  rightElement={
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="text-gray-500 hover:text-cyan-400 transition-colors p-1"
-                    >
-                      {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
-                    </button>
-                  }
+                  placeholder="Enter your password"
+                  className="w-full py-3 pl-12 pr-12 bg-[#16213e] border border-[#2d2d4a] rounded-lg text-white placeholder-[#6b6b7b] focus:border-[#4285f4] focus:outline-none transition-colors"
                 />
-              </motion.div>
-
-              {/* Error Message */}
-              {(error || storeError) && (
-                <motion.div
-                  className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm text-center"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6b6b7b] hover:text-white transition-colors"
                 >
-                  {error || storeError}
-                </motion.div>
-              )}
+                  {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
 
-              {/* Submit Button */}
-              <motion.button
-                type="submit"
-                disabled={isLoading}
-                className="btn-primary w-full flex items-center justify-center gap-3 py-4 disabled:opacity-50"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.7 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {isLoading ? (
-                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Sign In</span>
-                    <FiArrowRight />
-                  </>
-                )}
-              </motion.button>
-            </form>
-
-            {/* Register Link */}
-            <motion.div 
-              className="mt-8 text-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4, delay: 0.8 }}
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 bg-[#4285f4] hover:bg-[#1a73e8] text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <p className="text-gray-400">
-                Don't have an account?{' '}
-                <Link 
-                  to="/register" 
-                  className="text-cyan-400 font-semibold hover:text-cyan-300 transition-colors"
-                >
-                  Create Account
-                </Link>
-              </p>
-            </motion.div>
-          </div>
+              {isLoading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Signing in...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <FiArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </form>
 
-          {/* Version Tag */}
-          <motion.p
-            className="text-center text-gray-600 text-sm mt-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.9 }}
-          >
-            Let'sClone v2.0 • Secure Connection
-          </motion.p>
-        </motion.div>
+          {/* Register Link */}
+          <div className="mt-6 text-center">
+            <p className="text-[#6b6b7b]">
+              Don'\''t have an account?{' '}
+              <Link to="/register" className="text-[#4285f4] hover:underline font-medium">
+                Create one
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
