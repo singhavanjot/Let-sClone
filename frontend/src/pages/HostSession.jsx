@@ -26,44 +26,65 @@ import { useWebRTC, useSocket } from '../hooks';
 import { useDeviceStore, useSessionStore, useAuthStore } from '../store';
 import { isScreenCaptureSupported } from '../webrtc';
 
-// Control Mode Options
-const ControlModeSelector = ({ mode, onChange }) => (
-  <div className="glass-card p-4 mb-6">
-    <h3 className="text-white font-medium mb-3 flex items-center">
-      <FiMousePointer className="w-4 h-4 mr-2 text-cyan-400" />
-      Control Mode
-    </h3>
-    <div className="grid grid-cols-2 gap-3">
-      <motion.button
-        onClick={() => onChange('view-only')}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        className={`p-4 rounded-xl border-2 transition-all ${
-          mode === 'view-only'
-            ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400'
-            : 'border-gray-700 bg-[#0a0a15] text-gray-400 hover:border-gray-600'
-        }`}
-      >
-        <FiEye className="w-6 h-6 mx-auto mb-2" />
-        <p className="font-medium text-sm">View Only</p>
-        <p className="text-xs opacity-70 mt-1">Viewer can only watch</p>
-      </motion.button>
+// Control Mode Toggle - GetScreen Style
+const ControlModeToggle = ({ mode, onChange, viewerConnected }) => (
+  <div className="glass-card p-5">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+          mode === 'full-control' 
+            ? 'bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30' 
+            : 'bg-gray-700'
+        }`}>
+          {mode === 'full-control' 
+            ? <FiMousePointer className="w-6 h-6 text-white" />
+            : <FiEye className="w-6 h-6 text-gray-400" />
+          }
+        </div>
+        <div>
+          <h3 className="text-white font-semibold text-lg">
+            {mode === 'full-control' ? 'Remote Control Enabled' : 'View Only Mode'}
+          </h3>
+          <p className="text-gray-400 text-sm">
+            {mode === 'full-control' 
+              ? 'Viewer can control your mouse & keyboard' 
+              : 'Viewer can only watch your screen'
+            }
+          </p>
+        </div>
+      </div>
       
+      {/* Toggle Switch */}
       <motion.button
-        onClick={() => onChange('full-control')}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        className={`p-4 rounded-xl border-2 transition-all ${
-          mode === 'full-control'
-            ? 'border-purple-500 bg-purple-500/10 text-purple-400'
-            : 'border-gray-700 bg-[#0a0a15] text-gray-400 hover:border-gray-600'
+        onClick={() => onChange(mode === 'full-control' ? 'view-only' : 'full-control')}
+        className={`relative w-16 h-8 rounded-full transition-all duration-300 ${
+          mode === 'full-control' 
+            ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
+            : 'bg-gray-600'
         }`}
+        whileTap={{ scale: 0.95 }}
       >
-        <FiMousePointer className="w-6 h-6 mx-auto mb-2" />
-        <p className="font-medium text-sm">Full Control</p>
-        <p className="text-xs opacity-70 mt-1">Viewer can control</p>
+        <motion.div
+          className="absolute top-1 w-6 h-6 bg-white rounded-full shadow-md"
+          animate={{ left: mode === 'full-control' ? '36px' : '4px' }}
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        />
       </motion.button>
     </div>
+    
+    {/* Quick Actions */}
+    {viewerConnected && mode === 'full-control' && (
+      <motion.div
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: 'auto' }}
+        className="mt-4 pt-4 border-t border-gray-700/50"
+      >
+        <p className="text-xs text-amber-400 flex items-center gap-2">
+          <FiAlertCircle className="w-4 h-4" />
+          Viewer has control access. Click toggle to revoke anytime.
+        </p>
+      </motion.div>
+    )}
   </div>
 );
 
@@ -596,8 +617,12 @@ function HostSession() {
               agentConnected={agentConnected}
             />
 
-            {/* Control Mode Selector */}
-            <ControlModeSelector mode={controlMode} onChange={handleControlModeChange} />
+            {/* Control Mode Toggle - GetScreen Style */}
+            <ControlModeToggle 
+              mode={controlMode} 
+              onChange={handleControlModeChange} 
+              viewerConnected={step === 'connected'} 
+            />
 
             {/* Control Info Card */}
             {controlMode === 'full-control' && (

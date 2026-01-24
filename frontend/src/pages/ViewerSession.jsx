@@ -540,6 +540,59 @@ function ViewerSession() {
 
   return (
     <div className="space-y-4 p-4">
+      {/* Control Permission Banner */}
+      {connectionState === 'connected' && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-4 rounded-xl border ${
+            hostAllowsControl 
+              ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30' 
+              : 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                hostAllowsControl 
+                  ? 'bg-purple-500/20' 
+                  : 'bg-cyan-500/20'
+              }`}>
+                {hostAllowsControl 
+                  ? <FiMousePointer className="w-5 h-5 text-purple-400" />
+                  : <FiEye className="w-5 h-5 text-cyan-400" />
+                }
+              </div>
+              <div>
+                <p className={`font-semibold ${hostAllowsControl ? 'text-purple-400' : 'text-cyan-400'}`}>
+                  {hostAllowsControl ? '🎮 Remote Control Enabled' : '👁️ View Only Mode'}
+                </p>
+                <p className="text-gray-400 text-sm">
+                  {hostAllowsControl 
+                    ? 'You can control the host\'s mouse and keyboard' 
+                    : 'Host has restricted control. You can only view the screen.'
+                  }
+                </p>
+              </div>
+            </div>
+            {hostAllowsControl && (
+              <motion.button
+                onClick={() => setControlEnabled(!controlEnabled)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  controlEnabled 
+                    ? 'bg-purple-500 text-white' 
+                    : 'bg-gray-700 text-gray-300'
+                }`}
+              >
+                {controlEnabled ? 'Control ON' : 'Control OFF'}
+              </motion.button>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
