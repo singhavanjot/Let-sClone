@@ -425,6 +425,8 @@ class ControlExecutor {
   async executeKeyboardEvent(event) {
     const { type, code, key } = event;
     
+    console.log('executeKeyboardEvent:', { type, code, key });
+    
     let vk = VK_CODES[code];
     
     // For single characters not in map, try getting VK from character
@@ -433,7 +435,7 @@ class ControlExecutor {
     }
     
     if (!vk) {
-      console.log(`Unmapped key: ${code}`);
+      console.log(`Unmapped key: ${code}, key: ${key}`);
       return;
     }
 
@@ -444,8 +446,10 @@ class ControlExecutor {
     
     if (type === 'keydown') {
       command = `[InputSimulator]::KeyDown(${vk}, ${extendedStr})`;
+      console.log('>>> EXECUTING KEYDOWN:', key, 'vk:', vk);
     } else if (type === 'keyup') {
       command = `[InputSimulator]::KeyUp(${vk}, ${extendedStr})`;
+      console.log('>>> EXECUTING KEYUP:', key, 'vk:', vk);
     }
 
     if (command) {

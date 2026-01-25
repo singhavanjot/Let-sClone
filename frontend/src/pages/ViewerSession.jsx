@@ -57,8 +57,9 @@ const InteractiveRemoteScreen = ({
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const [videoSize, setVideoSize] = useState({ width: 1920, height: 1080 });
+  const [cursorPos, setCursorPos] = useState({ x: 50, y: 50 }); // Cursor position as percentage
   const lastMouseMoveRef = useRef(0);
-  const MOUSE_MOVE_THROTTLE = 16; // ~60fps throttle for mouse move events
+  const MOUSE_MOVE_THROTTLE = 33; // ~30fps throttle for mouse move events (reduces latency)
 
   // Attach stream to video
   useEffect(() => {
@@ -98,13 +99,16 @@ const InteractiveRemoteScreen = ({
   const handleMouseMove = useCallback((e) => {
     if (!controlEnabled || !hostAllowsControl) return;
     
-    // Throttle mouse move events to ~60fps
-    const now = Date.now();
-    if (now - lastMouseMoveRef.current < MOUSE_MOVE_THROTTLE) return;
-    lastMouseMoveRef.current = now;
-    
     const coords = getRelativeCoords(e);
     if (coords) {
+      // Always update local cursor position for visual feedback
+      setCursorPos({ x: coords.relX * 100, y: coords.relY * 100 });
+      
+      // Throttle network events to ~30fps
+      const now = Date.now();
+      if (now - lastMouseMoveRef.current < MOUSE_MOVE_THROTTLE) return;
+      lastMouseMoveRef.current = now;
+      
       onMouseEvent?.({ type: 'mousemove', ...coords, timestamp: now });
     }
   }, [controlEnabled, hostAllowsControl, getRelativeCoords, onMouseEvent]);
@@ -253,14 +257,32 @@ const InteractiveRemoteScreen = ({
       onWheel={handleWheel}
     >
       {stream ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          onLoadedMetadata={handleLoadedMetadata}
-          className="w-full h-full object-contain"
-        />
+        <>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            onLoadedMetadata={handleLoadedMetadata}
+            className="w-full h-full object-contain"
+          />
+          {/* Cursor overlay - shows where your mouse is on remote screen */}
+          {isInteractive && (
+            <div
+              className="absolute pointer-events-none z-10 transition-transform duration-[16ms]"
+              style={{
+                left: `${cursorPos.x}%`,
+                top: `${cursorPos.y}%`,
+                transform: 'translate(-50%, -50%)'
+              }}
+            >
+              {/* Cursor dot */}
+              <div className="w-4 h-4 bg-blue-500 rounded-full opacity-80 shadow-lg shadow-blue-500/50" />
+              {/* Cursor ring */}
+              <div className="absolute -inset-1 border-2 border-blue-400 rounded-full animate-ping opacity-50" />
+            </div>
+          )}
+        </>
       ) : (
         <div className="flex items-center justify-center h-full min-h-[400px]">
           <div className="text-center">
