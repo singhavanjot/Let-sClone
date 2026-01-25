@@ -633,13 +633,10 @@ const initializeSocketServer = (server) => {
           return socket.emit('error', { message: 'Session not found' });
         }
         
-        // Verify the agent belongs to the host user
-        if (sessionRoom.hostSocketId !== socket.id) {
-          // Store agent socket separately
-          sessionRoom.agentSocketId = socket.id;
-          sessionRoom.agentCapabilities = capabilities || ['mouse', 'keyboard'];
-          sessionRooms.set(sessionCode, sessionRoom);
-        }
+        // Store agent socket - agent is separate from host browser
+        sessionRoom.agentSocketId = socket.id;
+        sessionRoom.agentCapabilities = capabilities || ['mouse', 'keyboard'];
+        sessionRooms.set(sessionCode, sessionRoom);
         
         socket.sessionCode = sessionCode;
         socket.isAgent = true;

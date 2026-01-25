@@ -242,7 +242,7 @@ const InteractiveRemoteScreen = ({
     <div 
       ref={containerRef}
       className="relative w-full h-full bg-black rounded-lg overflow-hidden"
-      style={{ cursor: isInteractive ? 'none' : 'default' }}
+      style={{ cursor: isInteractive ? 'crosshair' : 'default' }}
       tabIndex={0}
       onMouseMove={handleMouseMove}
       onMouseDown={handleMouseDown}
