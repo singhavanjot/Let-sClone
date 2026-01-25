@@ -145,6 +145,15 @@ class SocketService {
   }
 
   /**
+   * Forward control event to desktop agent
+   * @param {string} sessionCode - Session code
+   * @param {Object} event - Control event data
+   */
+  forwardToAgent(sessionCode, event) {
+    return this.emit('control:forward-to-agent', { sessionCode, event });
+  }
+
+  /**
    * End session
    * @param {string} sessionCode - Session code
    */

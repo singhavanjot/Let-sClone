@@ -249,9 +249,10 @@ export function useWebRTC(isHost = false) {
 
     // Data channel message
     webrtcRef.current.onDataChannelMessage = (data) => {
-      // Handle control events on host
-      if (isHost) {
-        console.log('Received control event:', data);
+      // Handle control events on host - forward to desktop agent
+      if (isHost && sessionCodeRef.current) {
+        console.log('Received control event, forwarding to agent:', data.type);
+        socketService.forwardToAgent(sessionCodeRef.current, data);
       }
     };
 
