@@ -189,25 +189,36 @@ async function initControlExecutor() {
  * Handle connection to web app
  */
 function handleConnect(serverUrl, token, sessionCode) {
+  console.log('=== handleConnect called ===');
+  console.log('Server URL:', serverUrl);
+  console.log('Session Code:', sessionCode);
+  console.log('Token present:', !!token);
+  
   if (socketClient) {
+    console.log('Disconnecting existing socket...');
     socketClient.disconnect();
   }
 
   socketClient = new SocketClient(serverUrl, token);
 
   socketClient.on('connected', () => {
-    console.log('Connected to server');
+    console.log('=== Socket Connected to server ===');
     mainWindow?.webContents.send('connection-status', { 
       status: 'connected', 
       sessionCode 
     });
     
     // Join the session as desktop agent
+    console.log('Joining session as agent:', sessionCode);
     socketClient.joinAsAgent(sessionCode);
   });
 
+  socketClient.on('agent-registered', (data) => {
+    console.log('=== Agent Registered Successfully ===', data);
+  });
+
   socketClient.on('disconnected', (reason) => {
-    console.log('Disconnected:', reason);
+    console.log('=== Socket Disconnected ===', reason);
     mainWindow?.webContents.send('connection-status', { 
       status: 'disconnected', 
       reason 
@@ -215,16 +226,22 @@ function handleConnect(serverUrl, token, sessionCode) {
   });
 
   socketClient.on('control-event', async (event) => {
+    console.log('>>> CONTROL EVENT RECEIVED:', JSON.stringify(event));
     if (controlExecutor) {
+      console.log('Executing control event...');
       await controlExecutor.execute(event);
+      console.log('Control event executed');
+    } else {
+      console.log('No control executor!');
     }
   });
 
   socketClient.on('error', (error) => {
-    console.error('Socket error:', error);
+    console.error('=== Socket Error ===', error);
     mainWindow?.webContents.send('error', { message: error.message });
   });
 
+  console.log('Calling socketClient.connect()...');
   socketClient.connect();
 }
 
@@ -264,6 +281,7 @@ app.on('open-url', (event, url) => {
 
 // Handle IPC messages from renderer
 ipcMain.handle('connect', async (event, { serverUrl, token, sessionCode }) => {
+  console.log('[IPC] Connect called with:', { serverUrl, sessionCode, tokenLength: token?.length });
   store.set('serverUrl', serverUrl);
   handleConnect(serverUrl, token, sessionCode);
   return { success: true };

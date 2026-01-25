@@ -21,11 +21,12 @@ class SocketClient extends EventEmitter {
    * Connect to the server
    */
   connect() {
-    console.log(`Connecting to ${this.serverUrl}...`);
+    console.log(`[SocketClient] Connecting to ${this.serverUrl}...`);
 
     // Ensure URL doesn't have trailing slash
     const cleanUrl = this.serverUrl.replace(/\/$/, '');
-    console.log('Connecting with token:', this.token ? 'present' : 'missing');
+    console.log('[SocketClient] Clean URL:', cleanUrl);
+    console.log('[SocketClient] Token present:', !!this.token);
     
     this.socket = io(cleanUrl, {
       auth: {
@@ -40,6 +41,7 @@ class SocketClient extends EventEmitter {
       forceNew: true
     });
 
+    console.log('[SocketClient] Socket created, setting up handlers...');
     this.setupEventHandlers();
   }
 
@@ -48,18 +50,18 @@ class SocketClient extends EventEmitter {
    */
   setupEventHandlers() {
     this.socket.on('connect', () => {
-      console.log('Connected to server');
+      console.log('[SocketClient] ✓ Connected to server! Socket ID:', this.socket.id);
       this.reconnectAttempts = 0;
       this.emit('connected');
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('Disconnected:', reason);
+      console.log('[SocketClient] ✗ Disconnected:', reason);
       this.emit('disconnected', reason);
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('Connection error:', error.message);
+      console.error('[SocketClient] ✗ Connection error:', error.message);
       this.reconnectAttempts++;
       this.emit('error', { message: `Connection failed: ${error.message}` });
     });
@@ -67,35 +69,35 @@ class SocketClient extends EventEmitter {
     // Handle control events from the server
     this.socket.on('control:event', (data) => {
       const { event, fromViewer } = data;
-      console.log('Received control event:', event.type, 'from:', fromViewer);
+      console.log('[SocketClient] >>> Control event received:', event.type, 'from:', fromViewer);
       this.emit('control-event', event);
     });
 
     // Handle agent-specific events
     this.socket.on('agent:registered', (data) => {
-      console.log('Agent registered:', data);
+      console.log('[SocketClient] ✓ Agent registered:', data);
       this.emit('agent-registered', data);
     });
 
     this.socket.on('session:state-changed', (data) => {
-      console.log('Session state changed:', data.state);
+      console.log('[SocketClient] Session state changed:', data.state);
       this.emit('session-state-changed', data);
     });
 
     this.socket.on('session:ended', () => {
-      console.log('Session ended');
+      console.log('[SocketClient] Session ended');
       this.emit('session-ended');
       this.sessionCode = null;
     });
 
     this.socket.on('error', (error) => {
-      console.error('Server error:', error);
+      console.error('[SocketClient] ✗ Server error:', error);
       this.emit('error', error);
     });
 
     // Handle control mode changes
     this.socket.on('control-mode-change', (data) => {
-      console.log('Control mode changed:', data.controlMode);
+      console.log('[SocketClient] Control mode changed:', data.controlMode);
       this.emit('control-mode-change', data);
     });
   }

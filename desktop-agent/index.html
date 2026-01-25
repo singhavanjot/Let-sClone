@@ -318,6 +318,7 @@
 
     // State
     let isConnecting = false;
+    let lastAutoConnectCode = null;
 
     // Initialize
     async function init() {
@@ -340,13 +341,23 @@
 
     // Handle auto-connect from website deep link
     function handleAutoConnect(data) {
-      console.log('Auto-connect received:', data);
+      console.log('[UI] Auto-connect received:', data);
+      
+      // Prevent duplicate auto-connects
+      if (data.sessionCode === lastAutoConnectCode && isConnecting) {
+        console.log('[UI] Duplicate auto-connect ignored');
+        return;
+      }
+      
+      lastAutoConnectCode = data.sessionCode;
       
       if (data.sessionCode) {
         sessionCodeInput.value = data.sessionCode;
+        console.log('[UI] Session code set:', data.sessionCode);
       }
       if (data.token) {
         authTokenInput.value = data.token;
+        console.log('[UI] Token set, length:', data.token.length);
       }
       
       // Show notification
@@ -355,9 +366,21 @@
       
       // Auto-click connect after a short delay
       if (data.sessionCode && data.token && serverUrlInput.value) {
+        console.log('[UI] Auto-clicking connect button in 500ms...');
         setTimeout(() => {
-          connectBtn.click();
+          if (!isConnecting) {
+            console.log('[UI] Clicking connect button now!');
+            connectBtn.click();
+          } else {
+            console.log('[UI] Already connecting, skipping click');
+          }
         }, 500);
+      } else {
+        console.log('[UI] Cannot auto-connect, missing:', {
+          hasSessionCode: !!data.sessionCode,
+          hasToken: !!data.token,
+          hasServerUrl: !!serverUrlInput.value
+        });
       }
     }
 
@@ -419,9 +442,12 @@
 
     // Connect button click
     connectBtn.addEventListener('click', async () => {
+      console.log('[UI] Connect button clicked!');
       const serverUrl = serverUrlInput.value.trim();
       const sessionCode = sessionCodeInput.value.trim().toUpperCase();
       const token = authTokenInput.value.trim();
+
+      console.log('[UI] Values:', { serverUrl, sessionCode, tokenLength: token.length });
 
       if (!serverUrl || !sessionCode || !token) {
         showError('Please fill in all fields');
@@ -440,9 +466,12 @@
       statusIndicator.className = 'status-indicator connecting';
       statusText.textContent = 'Connecting...';
 
+      console.log('[UI] Calling electronAPI.connect...');
       try {
         await window.electronAPI.connect({ serverUrl, token, sessionCode });
+        console.log('[UI] electronAPI.connect completed');
       } catch (error) {
+        console.error('[UI] Connect error:', error);
         showError(error.message);
         isConnecting = false;
         connectBtn.disabled = false;

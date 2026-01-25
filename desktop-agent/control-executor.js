@@ -262,15 +262,31 @@ class ControlExecutor {
   executeCommand(command) {
     const fullScript = `${PS_SCRIPT}\n${command}`;
     
+    console.log('Running PowerShell command...');
+    
     const ps = spawn('powershell.exe', [
       '-NoProfile',
       '-NonInteractive',
       '-ExecutionPolicy', 'Bypass',
       '-Command', fullScript
-    ], { stdio: 'ignore' });
+    ]);
+
+    ps.stdout.on('data', (data) => {
+      console.log('PS stdout:', data.toString());
+    });
+    
+    ps.stderr.on('data', (data) => {
+      console.error('PS stderr:', data.toString());
+    });
 
     ps.on('error', (err) => {
-      console.error('PowerShell error:', err);
+      console.error('PowerShell spawn error:', err);
+    });
+    
+    ps.on('close', (code) => {
+      if (code !== 0) {
+        console.error('PowerShell exited with code:', code);
+      }
     });
   }
 
@@ -293,15 +309,30 @@ class ControlExecutor {
    * Execute a control event
    */
   async execute(event) {
-    if (!this.enabled || process.platform !== 'win32') return;
+    console.log('ControlExecutor.execute called with:', event);
+    
+    if (!this.enabled) {
+      console.log('Control executor is disabled');
+      return;
+    }
+    
+    if (process.platform !== 'win32') {
+      console.log('Not Windows, skipping');
+      return;
+    }
 
     try {
       const eventType = event.type;
+      console.log('Event type:', eventType);
       
       if (['mousemove', 'mousedown', 'mouseup', 'click', 'dblclick', 'scroll', 'contextmenu'].includes(eventType)) {
+        console.log('Executing mouse event');
         await this.executeMouseEvent(event);
       } else if (['keydown', 'keyup'].includes(eventType)) {
+        console.log('Executing keyboard event');
         await this.executeKeyboardEvent(event);
+      } else {
+        console.log('Unknown event type:', eventType);
       }
     } catch (error) {
       console.error('Error executing control event:', error);
@@ -313,6 +344,8 @@ class ControlExecutor {
    */
   async executeMouseEvent(event) {
     const { type, x, y, relX, relY, button, deltaX, deltaY, videoWidth, videoHeight } = event;
+    
+    console.log('executeMouseEvent:', { type, x, y, relX, relY, videoWidth, videoHeight });
     
     // Calculate screen coordinates
     let screenX, screenY;
@@ -379,7 +412,10 @@ class ControlExecutor {
     }
 
     if (command) {
+      console.log('>>> EXECUTING MOUSE:', type, 'at', screenX, screenY);
       this.executeCommand(command);
+    } else {
+      console.log('No command generated for:', type);
     }
   }
 
