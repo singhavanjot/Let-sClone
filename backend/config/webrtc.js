@@ -1,6 +1,13 @@
 /**
  * WebRTC Configuration
  * STUN/TURN server settings for NAT traversal
+ * 
+ * IMPORTANT FOR PRODUCTION:
+ * The free public TURN servers can be unreliable and may fail under high load.
+ * For reliable cross-network connections, get a dedicated TURN server:
+ * - Recommended: https://www.metered.ca/stun-turn (Free 50GB/month)
+ * - Set env vars: TURN_SERVER_URL, TURN_USERNAME, TURN_CREDENTIAL
+ * - Fallback: https://expressturn.com for better reliability
  */
 
 // Get TURN credentials from environment or use free public servers
@@ -125,13 +132,13 @@ const getTurnServers = () => {
 module.exports = {
   // ICE servers configuration
   iceServers: [
-    // Google's public STUN servers
+    // Google's public STUN servers (reliable for NAT discovery)
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:global.stun.twilio.com:3478' },
     
-    // TURN servers
+    // TURN servers (required for cross-network connections)
     ...getTurnServers()
   ],
   
@@ -141,6 +148,7 @@ module.exports = {
   // Maximum concurrent sessions per user
   maxSessionsPerUser: 5,
   
-  // ICE candidate gathering timeout
-  iceCandidateTimeout: 10000
+  // ICE candidate gathering timeout (increased from 10s to 15s for TURN servers)
+  // IMPORTANT: This timeout must be long enough for TURN servers to respond
+  iceCandidateTimeout: 15000
 };

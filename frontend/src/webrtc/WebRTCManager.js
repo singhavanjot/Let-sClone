@@ -21,6 +21,9 @@ class WebRTCManager {
 
     // Pending ICE candidates (received before remote description set)
     this.pendingCandidates = [];
+    
+    // Timeout management
+    this.disconnectTimeout = null;
   }
 
   /**
@@ -69,9 +72,14 @@ class WebRTCManager {
             this.onIceCandidate(event.candidate);
           }
         } else {
-          console.log('ICE gathering complete. Candidates:', candidateCounts);
+          console.log('✅ ICE gathering complete. Candidates:', candidateCounts);
           if (candidateCounts.relay === 0) {
-            console.warn('⚠️ NO RELAY CANDIDATES FOUND! TURN servers may not be working. Cross-network connections will fail.');
+            console.warn('⚠️ NO RELAY CANDIDATES FOUND!');
+            console.warn('  TURN servers may not be working or are overloaded.');
+            console.warn('  This will cause cross-network connections to FAIL.');
+            console.warn('  Solution: Check TURN server credentials and availability.');
+          } else {
+            console.log(`✅ RELAY candidates found: ${candidateCounts.relay} (TURN working properly)`);
           }
         }
       };
@@ -102,24 +110,40 @@ class WebRTCManager {
         console.log('ICE connection state:', state);
         
         if (state === 'failed') {
-          console.error('ICE connection failed - attempting restart');
+          console.error('⚠️ ICE connection FAILED - attempting restart with new candidates');
           // Trigger ICE restart with renegotiation
           if (this.onIceRestart) {
             this.onIceRestart();
           }
         } else if (state === 'disconnected') {
-          console.warn('ICE disconnected - waiting for reconnection');
-          // Set a timeout to restart if still disconnected
-          setTimeout(() => {
-            if (this.peerConnection && this.peerConnection.iceConnectionState === 'disconnected') {
-              console.log('Still disconnected after timeout, triggering restart');
-              if (this.onIceRestart) {
-                this.onIceRestart();
+          console.warn('⚠️ ICE disconnected - waiting for reconnection (10 second timeout)');
+          // Give it more time (10 seconds) before restarting
+          // Some networks take time to reconnect
+          if (!this.disconnectTimeout) {
+            this.disconnectTimeout = setTimeout(() => {
+              if (this.peerConnection && this.peerConnection.iceConnectionState === 'disconnected') {
+                console.log('Still disconnected after 10s timeout, triggering ICE restart');
+                this.disconnectTimeout = null;
+                if (this.onIceRestart) {
+                  this.onIceRestart();
+                }
               }
-            }
-          }, 5000);
+            }, 10000);
+          }
         } else if (state === 'connected' || state === 'completed') {
-          console.log('ICE connection established successfully');
+          console.log('✅ ICE connection established successfully');
+          // Clear disconnect timeout if connection recovers
+          if (this.disconnectTimeout) {
+            clearTimeout(this.disconnectTimeout);
+            this.disconnectTimeout = null;
+          }
+        } else if (state === 'checking') {
+          console.log('🔍 ICE connection checking for candidates...');
+          // Clear disconnect timeout when checking
+          if (this.disconnectTimeout) {
+            clearTimeout(this.disconnectTimeout);
+            this.disconnectTimeout = null;
+          }
         }
       };
 
@@ -421,6 +445,12 @@ class WebRTCManager {
    * Close the peer connection
    */
   close() {
+    // Clear disconnect timeout to prevent memory leaks
+    if (this.disconnectTimeout) {
+      clearTimeout(this.disconnectTimeout);
+      this.disconnectTimeout = null;
+    }
+
     // Close data channel
     if (this.dataChannel) {
       this.dataChannel.close();

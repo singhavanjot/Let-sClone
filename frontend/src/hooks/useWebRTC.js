@@ -47,6 +47,22 @@ const DEFAULT_ICE_SERVERS = [
     username: 'openrelayproject',
     credential: 'openrelayproject'
   },
+  // Additional Metered.ca TURN servers (more reliable)
+  {
+    urls: 'turn:a.relay.metered.ca:80',
+    username: 'e8dd65b92c62d5e62f54de02',
+    credential: 'uWdWNmkhvyqTmFXB'
+  },
+  {
+    urls: 'turn:a.relay.metered.ca:443',
+    username: 'e8dd65b92c62d5e62f54de02',
+    credential: 'uWdWNmkhvyqTmFXB'
+  },
+  {
+    urls: 'turn:a.relay.metered.ca:443?transport=tcp',
+    username: 'e8dd65b92c62d5e62f54de02',
+    credential: 'uWdWNmkhvyqTmFXB'
+  },
   {
     urls: 'turns:openrelay.metered.ca:443?transport=tcp',
     username: 'openrelayproject',
@@ -173,15 +189,18 @@ export function useWebRTC(isHost = false) {
         // Request config
         socketService.emit('get-config');
         
-        // Timeout after 3 seconds, continue with defaults
+        // Timeout after 8 seconds, continue with enhanced defaults
         setTimeout(() => {
           if (!resolved) {
-            console.warn('ICE config timeout - continuing with default servers');
+            console.warn('ICE config timeout - continuing with enhanced fallback servers');
             resolved = true;
             socketService.off('config', handleConfig);
+            // Use enhanced fallback servers with more TURN options
+            const enhancedFallback = [...DEFAULT_ICE_SERVERS];
+            webrtcRef.current.setIceServers(enhancedFallback);
             resolve();
           }
-        }, 3000);
+        }, 8000);
       });
       
       return true;
