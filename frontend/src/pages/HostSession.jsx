@@ -1,511 +1,725 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+/**
+ * Host Session Page - Modern Clean Design
+ */
+
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Monitor, Share2, X, Copy, Check, Users, AlertCircle,
-  Wifi, Eye, MousePointer, Lock, Unlock, Download, Link2,
-  Shield, Play, Square, Zap, ChevronRight
-} from 'lucide-react';
+import { 
+  FiMonitor, 
+  FiShare2, 
+  FiX, 
+  FiCopy, 
+  FiCheck,
+  FiUsers,
+  FiAlertCircle,
+  FiWifi,
+  FiEye,
+  FiMousePointer,
+  FiLock,
+  FiUnlock,
+  FiDownload,
+  FiLink
+} from 'react-icons/fi';
+import toast from 'react-hot-toast';
 import { RemoteScreen, ConnectionStatus, LoadingSpinner } from '../components';
-import { useWebRTC } from '../hooks/useWebRTC';
-import { useSocket } from '../hooks/useSocket';
-import useDeviceStore from '../store/deviceStore';
-import useSessionStore from '../store/sessionStore';
-import useAuthStore from '../store/authStore';
+import { useWebRTC, useSocket } from '../hooks';
+import { useDeviceStore, useSessionStore, useAuthStore } from '../store';
+import { isScreenCaptureSupported } from '../webrtc';
 
-/* ─── Sub-components ─── */
-
-function ControlModeToggle({ controlMode, onToggle, disabled }) {
-  const isView = controlMode === 'view';
-  return (
-    <button
-      onClick={onToggle}
-      disabled={disabled}
-      className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
-        ${isView
-          ? 'bg-accent/10 text-accent border border-accent/30'
-          : 'bg-neon-purple/10 text-neon-purple border border-neon-purple/30'}
-        ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:shadow-neon cursor-pointer'}`}
-    >
-      {isView ? <Eye size={16} /> : <MousePointer size={16} />}
-      {isView ? 'View Only' : 'Full Control'}
-    </button>
-  );
-}
-
-function SessionCodeDisplay({ code, onCopy, copied }) {
-  if (!code) return null;
-  const digits = code.split('');
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <span className="text-xs uppercase tracking-widest text-[var(--text-muted)]">Session Code</span>
-      <div className="flex gap-2">
-        {digits.map((d, i) => (
-          <span key={i} className="session-code-digit">{d}</span>
-        ))}
+// Control Mode Toggle - GetScreen Style
+const ControlModeToggle = ({ mode, onChange, viewerConnected }) => (
+  <div className="glass-card p-5">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+          mode === 'full-control' 
+            ? 'bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30' 
+            : 'bg-gray-700'
+        }`}>
+          {mode === 'full-control' 
+            ? <FiMousePointer className="w-6 h-6 text-white" />
+            : <FiEye className="w-6 h-6 text-gray-400" />
+          }
+        </div>
+        <div>
+          <h3 className="text-white font-semibold text-lg">
+            {mode === 'full-control' ? 'Remote Control Enabled' : 'View Only Mode'}
+          </h3>
+          <p className="text-gray-400 text-sm">
+            {mode === 'full-control' 
+              ? 'Viewer can control your mouse & keyboard' 
+              : 'Viewer can only watch your screen'
+            }
+          </p>
+        </div>
       </div>
-      <button
-        onClick={onCopy}
-        className="flex items-center gap-1.5 text-sm text-accent hover:text-white transition-colors"
+      
+      {/* Toggle Switch */}
+      <motion.button
+        onClick={() => onChange(mode === 'full-control' ? 'view-only' : 'full-control')}
+        className={`relative w-16 h-8 rounded-full transition-all duration-300 ${
+          mode === 'full-control' 
+            ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
+            : 'bg-gray-600'
+        }`}
+        whileTap={{ scale: 0.95 }}
       >
-        {copied ? <><Check size={14} /> Copied!</> : <><Copy size={14} /> Copy Code</>}
-      </button>
+        <motion.div
+          className="absolute top-1 w-6 h-6 bg-white rounded-full shadow-md"
+          animate={{ left: mode === 'full-control' ? '36px' : '4px' }}
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        />
+      </motion.button>
     </div>
-  );
-}
+    
+    {/* Quick Actions */}
+    {viewerConnected && mode === 'full-control' && (
+      <motion.div
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: 'auto' }}
+        className="mt-4 pt-4 border-t border-gray-700/50"
+      >
+        <p className="text-xs text-amber-400 flex items-center gap-2">
+          <FiAlertCircle className="w-4 h-4" />
+          Viewer has control access. Click toggle to revoke anytime.
+        </p>
+      </motion.div>
+    )}
+  </div>
+);
 
-/* ─── Main Component ─── */
+// Session Code Display Component
+const SessionCodeDisplay = ({ code, onCopy, copied, onLaunchAgent, agentConnected }) => (
+  <div className="glass-card p-8 text-center">
+    <p className="text-gray-400 mb-4">Share this code with your viewer</p>
+    
+    <div className="flex justify-center gap-3 mb-6">
+      {code.split('').map((char, i) => (
+        <motion.div
+          key={i}
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ delay: i * 0.1, type: 'spring' }}
+          className="session-code-digit"
+        >
+          {char}
+        </motion.div>
+      ))}
+    </div>
 
-export default function HostSession() {
-  const { user } = useAuthStore();
-  const { currentDevice, registerDevice } = useDeviceStore();
-  const { createSession, currentSession, endSession } = useSessionStore();
-  const { socket, connected: socketConnected } = useSocket();
+    <div className="flex flex-col sm:flex-row justify-center gap-3 mb-6">
+      <motion.button
+        onClick={onCopy}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className={`inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all ${
+          copied 
+            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+            : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'
+        }`}
+      >
+        {copied ? <FiCheck className="w-5 h-5" /> : <FiCopy className="w-5 h-5" />}
+        <span>{copied ? 'Copied!' : 'Copy Code'}</span>
+      </motion.button>
+    </div>
 
+    {/* Desktop Agent Section */}
+    <div className="border-t border-gray-700 pt-6 mt-6">
+      <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full mb-4 ${
+        agentConnected 
+          ? 'bg-emerald-500/20 text-emerald-400' 
+          : 'bg-orange-500/20 text-orange-400'
+      }`}>
+        <div className={`w-2 h-2 rounded-full ${agentConnected ? 'bg-emerald-400' : 'bg-orange-400 animate-pulse'}`} />
+        <span className="text-sm font-medium">
+          {agentConnected ? 'Desktop Agent Connected' : 'Desktop Agent Required'}
+        </span>
+      </div>
+      
+      {!agentConnected && (
+        <div className="space-y-3">
+          <p className="text-gray-500 text-sm">
+            Enable mouse & keyboard control by connecting the Desktop Agent
+          </p>
+          
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
+            <motion.button
+              onClick={onLaunchAgent}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30 transition-all"
+            >
+              <FiLink className="w-5 h-5" />
+              <span>Launch Agent</span>
+            </motion.button>
+            
+            <a
+              href="https://github.com/singhavanjot/Let-sClone/releases/download/v1.0.0/LetsCloneAgent-win32-x64.zip"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all"
+            >
+              <FiDownload className="w-5 h-5" />
+              <span>Download Agent</span>
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+function HostSession() {
   const [step, setStep] = useState('setup');
-  const [isSharing, setIsSharing] = useState(false);
-  const [sessionCode, setSessionCode] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [viewers, setViewers] = useState([]);
-  const [controlMode, setControlMode] = useState('view');
-  const [agentStatus, setAgentStatus] = useState('disconnected');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
+  const [session, setSession] = useState(null);
+  const [viewerInfo, setViewerInfo] = useState(null);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [controlMode, setControlMode] = useState('full-control'); // 'view-only' or 'full-control'
+  const [agentConnected, setAgentConnected] = useState(false);
+  
+  const { currentDevice, getOrCreateDevice, fetchDevices } = useDeviceStore();
+  const { createSession, endSession, isLoading: sessionLoading } = useSessionStore();
+  const { isConnected: socketConnected, registerDevice, on, off, emit } = useSocket();
+  const { token } = useAuthStore();
+  
   const {
-    localStream, remoteStream, connectionState, error: webrtcError,
-    startScreenShare, stopScreenShare, sendControlEvent, getStats
-  } = useWebRTC();
+    connectionState,
+    localStream,
+    error: webrtcError,
+    startHosting,
+    endConnection
+  } = useWebRTC(true);
 
-  const streamRef = useRef(null);
-
-  /* ─── Register device on mount ─── */
-  useEffect(() => {
-    if (!currentDevice && user) {
-      registerDevice({
-        name: `${user.name}'s Device`,
-        type: 'desktop',
-        os: navigator.platform
-      });
+  const handleCopyCode = () => {
+    if (session?.sessionCode) {
+      navigator.clipboard.writeText(session.sessionCode);
+      setCodeCopied(true);
+      toast.success('Code copied to clipboard!');
+      setTimeout(() => setCodeCopied(false), 3000);
     }
-  }, [currentDevice, user, registerDevice]);
+  };
 
-  /* ─── Socket listeners ─── */
+  // Launch desktop agent with auto-connect
+  const handleLaunchAgent = () => {
+    if (!session?.sessionCode || !token) {
+      toast.error('Session not ready');
+      return;
+    }
+    
+    // Try custom protocol first
+    const agentUrl = `letsclone://connect?code=${session.sessionCode}&token=${encodeURIComponent(token)}`;
+    
+    // Fallback message
+    const fallbackMessage = `If the agent doesn't open, please:\n1. Download and install the Desktop Agent\n2. Open it manually\n3. Enter code: ${session.sessionCode}`;
+    
+    // Attempt to open custom protocol
+    window.location.href = agentUrl;
+    
+    // Show instructions after a delay (in case protocol fails)
+    setTimeout(() => {
+      toast((t) => (
+        <div className="text-sm">
+          <p className="font-medium mb-2">Agent Launch Attempted</p>
+          <p className="text-gray-300">If it didn't open, enter this code manually:</p>
+          <p className="font-mono text-cyan-400 text-lg mt-1">{session.sessionCode}</p>
+        </div>
+      ), { duration: 5000 });
+    }, 1000);
+  };
+
+  // Listen for agent connection status
   useEffect(() => {
-    if (!socket) return;
-
-    const onAgentStatus = (data) => setAgentStatus(data.status);
-    const onViewerJoined = (data) => {
-      setViewers((prev) => [...prev.filter((v) => v.id !== data.viewerId), { id: data.viewerId, name: data.viewerName || 'Unknown', joinedAt: new Date() }]);
-      setStep('connected');
-    };
-    const onViewerLeft = (data) => setViewers((prev) => prev.filter((v) => v.id !== data.viewerId));
-    const onControlEvent = (data) => {
-      if (controlMode === 'control') sendControlEvent(data);
+    const handleAgentStatus = (data) => {
+      if (data.sessionCode === session?.sessionCode) {
+        setAgentConnected(data.connected);
+        if (data.connected) {
+          toast.success('Desktop Agent connected! Full control enabled.');
+        }
+      }
     };
 
-    socket.on('agent:status', onAgentStatus);
-    socket.on('viewer-joined', onViewerJoined);
-    socket.on('viewer-left', onViewerLeft);
-    socket.on('control:event', onControlEvent);
+    on('agent:status', handleAgentStatus);
+    return () => off('agent:status', handleAgentStatus);
+  }, [on, off, session?.sessionCode]);
 
-    return () => {
-      socket.off('agent:status', onAgentStatus);
-      socket.off('viewer-joined', onViewerJoined);
-      socket.off('viewer-left', onViewerLeft);
-      socket.off('control:event', onControlEvent);
-    };
-  }, [socket, controlMode, sendControlEvent]);
+  // Toggle control mode
+  const handleControlModeChange = (mode) => {
+    setControlMode(mode);
+    // Notify viewer of control mode change
+    if (session?.sessionCode) {
+      emit('control-mode-change', { 
+        sessionCode: session.sessionCode, 
+        controlMode: mode 
+      });
+      toast.success(mode === 'full-control' ? 'Full control enabled' : 'View only mode enabled');
+    }
+  };
 
-  /* ─── Keep ref in sync ─── */
-  useEffect(() => { streamRef.current = localStream; }, [localStream]);
+  useEffect(() => {
+    if (!isScreenCaptureSupported()) {
+      toast.error('Screen capture not supported in this browser');
+    }
+  }, []);
 
-  /* ─── Handlers ─── */
-  const handleStartSharing = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const stream = await startScreenShare();
-      if (!stream) throw new Error('Screen share was cancelled or failed');
+  useEffect(() => {
+    if (!currentDevice) {
+      getOrCreateDevice();
+    }
+  }, [currentDevice, getOrCreateDevice]);
 
-      const session = await createSession({ type: 'screen-share', controlMode });
-      if (!session?.sessionCode) throw new Error('Failed to create session');
+  useEffect(() => {
+    if (socketConnected && currentDevice) {
+      // Use deviceId (the generated unique ID), not MongoDB _id
+      registerDevice(currentDevice.deviceId);
+    }
+  }, [socketConnected, currentDevice, registerDevice]);
 
-      setSessionCode(session.sessionCode);
-      setIsSharing(true);
-      setStep('sharing');
-
-      if (socket) {
-        socket.emit('host-session', {
-          sessionCode: session.sessionCode,
-          deviceId: currentDevice?._id
+  // Listen for control events from viewer (for display/notification purposes)
+  // Note: Actual OS-level control requires a native desktop agent
+  useEffect(() => {
+    const handleControlEvent = (data) => {
+      const { event } = data;
+      console.log('Control event received from viewer:', event);
+      
+      // Show visual feedback for control events (cursor position indicator could be shown)
+      // In a real implementation, this would be handled by a native desktop agent
+      if (event.type === 'click' || event.type === 'dblclick') {
+        // Visual feedback only - actual control requires native agent
+        toast(`Viewer ${event.type === 'dblclick' ? 'double-' : ''}clicked at (${event.x}, ${event.y})`, {
+          icon: '🖱️',
+          duration: 1000
         });
       }
+    };
 
-      stream.getVideoTracks()[0]?.addEventListener('ended', () => handleStopSharing());
-    } catch (err) {
-      setError(err.message || 'Failed to start sharing');
-      stopScreenShare();
-    } finally {
-      setIsLoading(false);
+    on('control:event', handleControlEvent);
+    return () => off('control:event', handleControlEvent);
+  }, [on, off]);
+
+  useEffect(() => {
+    const handleViewerJoined = (data) => {
+      setViewerInfo(data);
+      setStep('connected');
+      toast.success(`${data.viewerEmail || 'Viewer'} connected!`);
+    };
+
+    const handleViewerLeft = () => {
+      setViewerInfo(null);
+      setStep('sharing');
+      toast('Viewer disconnected', { icon: '⚠️' });
+    };
+
+    on('viewer-joined', handleViewerJoined);
+    on('viewer-left', handleViewerLeft);
+
+    return () => {
+      off('viewer-joined', handleViewerJoined);
+      off('viewer-left', handleViewerLeft);
+    };
+  }, [on, off]);
+
+  useEffect(() => {
+    if (webrtcError) {
+      toast.error(webrtcError);
+      handleStopSharing();
     }
-  }, [startScreenShare, createSession, controlMode, socket, currentDevice, stopScreenShare]);
+  }, [webrtcError]);
 
-  const handleStopSharing = useCallback(async () => {
+  useEffect(() => {
+    if (connectionState === 'connected' && step !== 'connected') {
+      setStep('connected');
+    }
+  }, [connectionState, step]);
+
+  const handleStartSharing = async () => {
     try {
-      stopScreenShare();
-      if (currentSession) await endSession(currentSession._id);
-      if (socket && sessionCode) socket.emit('end-session', { sessionCode });
-    } catch (err) {
-      console.error('Error stopping session:', err);
-    } finally {
-      setIsSharing(false);
-      setSessionCode('');
-      setViewers([]);
+      if (!currentDevice) {
+        toast.error('Device not registered');
+        return;
+      }
+
+      // Create session - use deviceId (not MongoDB _id)
+      // Backend expects deviceId field which is the generated unique ID
+      const result = await createSession(currentDevice.deviceId);
+      
+      if (!result.success || !result.session) {
+        toast.error(result.error || 'Failed to create session');
+        return;
+      }
+
+      const newSession = result.session;
+      setSession(newSession);
+      
+      // Start WebRTC hosting with session code
+      const hostingStarted = await startHosting(newSession.sessionCode);
+      
+      if (hostingStarted) {
+        setStep('sharing');
+        toast.success('Screen sharing started!');
+        await fetchDevices();
+      } else {
+        // If screen sharing was cancelled or failed
+        setSession(null);
+        await endSession(newSession.id);
+      }
+    } catch (error) {
+      console.error('Start sharing error:', error);
+      toast.error(error.message || 'Failed to start sharing');
       setStep('setup');
-      setControlMode('view');
     }
-  }, [stopScreenShare, endSession, currentSession, socket, sessionCode]);
+  };
 
-  const handleCopyCode = useCallback(() => {
-    if (!sessionCode) return;
-    navigator.clipboard.writeText(sessionCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [sessionCode]);
+  const handleStopSharing = async () => {
+    try {
+      await endConnection();
+      
+      if (session) {
+        await endSession(session.id);
+      }
 
-  const handleLaunchAgent = useCallback(() => {
-    window.open('https://github.com/singhavanjot/Let-sClone/releases', '_blank', 'noopener');
-  }, []);
-
-  const handleControlModeChange = useCallback(() => {
-    const next = controlMode === 'view' ? 'control' : 'view';
-    setControlMode(next);
-    if (socket && sessionCode) {
-      socket.emit('control-mode-change', { sessionCode, mode: next });
+      setSession(null);
+      setViewerInfo(null);
+      setStep('setup');
+      toast.success('Session ended');
+    } catch (error) {
+      console.error('Stop sharing error:', error);
     }
-  }, [controlMode, socket, sessionCode]);
+  };
 
-  /* ─── Cleanup on unmount ─── */
   useEffect(() => {
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+      if (session) {
+        endConnection();
+        endSession(session.id);
       }
     };
-  }, []);
+  }, [session, endConnection, endSession]);
 
-  /* ─── Step: Setup ─── */
-  const renderSetup = () => (
-    <motion.div
-      key="setup"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col items-center gap-8 max-w-lg mx-auto text-center"
-    >
-      <div className="w-20 h-20 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center">
-        <Monitor size={36} className="text-accent" />
-      </div>
-
-      <div>
-        <h2 className="text-2xl font-display font-bold text-white mb-2">Share Your Screen</h2>
-        <p className="text-[var(--text-secondary)] text-sm leading-relaxed">
-          Start a session to share your screen with others. You'll get a session code to send to viewers.
-        </p>
-      </div>
-
-      <div className="w-full glass-card-static p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {controlMode === 'view' ? <Eye size={18} className="text-accent" /> : <MousePointer size={18} className="text-neon-purple" />}
-            <div className="text-left">
-              <p className="text-sm font-medium text-white">Control Mode</p>
-              <p className="text-xs text-[var(--text-muted)]">
-                {controlMode === 'view' ? 'Viewers can only watch' : 'Viewers can control your device'}
-              </p>
-            </div>
-          </div>
-          <ControlModeToggle controlMode={controlMode} onToggle={handleControlModeChange} />
-        </div>
-
-        <div className="border-t border-white/5" />
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Shield size={18} className="text-neon-green" />
-            <div className="text-left">
-              <p className="text-sm font-medium text-white">Encryption</p>
-              <p className="text-xs text-[var(--text-muted)]">End-to-end encrypted via WebRTC</p>
-            </div>
-          </div>
-          <span className="badge-success">Active</span>
-        </div>
-      </div>
-
-      {agentStatus === 'disconnected' && controlMode === 'control' && (
-        <div className="w-full glass-card-static p-4 border-neon-orange/20">
-          <div className="flex items-start gap-3">
-            <AlertCircle size={18} className="text-neon-orange mt-0.5 shrink-0" />
-            <div className="text-left">
-              <p className="text-sm font-medium text-neon-orange">Desktop Agent Required</p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">
-                For remote control, install and run the desktop agent on this machine.
-              </p>
-              <button onClick={handleLaunchAgent} className="flex items-center gap-1.5 mt-2 text-xs text-accent hover:text-white transition-colors">
-                <Download size={14} /> Download Agent
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="w-full p-3 rounded-lg bg-neon-red/10 border border-neon-red/20 text-neon-red text-sm flex items-center gap-2">
-          <AlertCircle size={16} /> {error}
-        </div>
-      )}
-
-      <button
-        onClick={handleStartSharing}
-        disabled={isLoading}
-        className="btn-primary w-full flex items-center justify-center gap-2"
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between"
       >
-        {isLoading ? (
-          <LoadingSpinner size="sm" />
-        ) : (
-          <>
-            <Play size={18} />
-            Start Sharing
-          </>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Host Session</h1>
+          <p className="text-gray-400 mt-1">Share your screen with remote viewers</p>
+        </div>
+        
+        {step !== 'setup' && (
+          <div className={`badge ${connectionState === 'connected' ? 'badge-success' : 'badge-warning'}`}>
+            <span className="w-2 h-2 rounded-full bg-current mr-2" />
+            {connectionState === 'connected' ? 'Connected' : 'Waiting...'}
+          </div>
         )}
-      </button>
-    </motion.div>
-  );
+      </motion.div>
 
-  /* ─── Step: Sharing (waiting for viewer) ─── */
-  const renderSharing = () => (
-    <motion.div
-      key="sharing"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="space-y-6"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-neon-green animate-pulse" />
-          <h2 className="text-lg font-display font-bold text-white">Screen Sharing Active</h2>
-        </div>
-        <button onClick={handleStopSharing} className="btn-danger flex items-center gap-2 text-sm">
-          <Square size={14} /> Stop Sharing
-        </button>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="glass-card overflow-hidden">
-            <div className="p-4 border-b border-white/5 flex items-center justify-between">
-              <span className="text-sm font-medium text-white flex items-center gap-2">
-                <Monitor size={16} className="text-accent" /> Live Preview
-              </span>
-              <span className="text-xs text-[var(--text-muted)]">
-                {localStream?.getVideoTracks()[0]?.getSettings().width}×
-                {localStream?.getVideoTracks()[0]?.getSettings().height}
-              </span>
-            </div>
-            <div className="aspect-video bg-black/40">
-              {localStream ? (
-                <RemoteScreen stream={localStream} muted isLocal />
-              ) : (
-                <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">
-                  No preview available
+      <AnimatePresence mode="wait">
+        {/* Setup Step */}
+        {step === 'setup' && (
+          <motion.div
+            key="setup"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-6"
+          >
+            {/* Main Start Sharing Card */}
+            <div className="glass-card overflow-hidden">
+              {/* Animated background gradient */}
+              <div className="relative p-12 text-center">
+                {/* Background glow effects */}
+                <motion.div 
+                  className="absolute inset-0 opacity-30"
+                  style={{
+                    background: 'radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.4) 0%, transparent 50%)'
+                  }}
+                  animate={{
+                    opacity: [0.2, 0.4, 0.2],
+                  }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                />
+                
+                {/* Floating particles */}
+                <div className="absolute inset-0 overflow-hidden">
+                  {[...Array(6)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute w-1 h-1 rounded-full bg-indigo-400/40"
+                      style={{
+                        left: `${20 + i * 15}%`,
+                        top: `${30 + (i % 3) * 20}%`,
+                      }}
+                      animate={{
+                        y: [-10, 10, -10],
+                        opacity: [0.3, 0.7, 0.3],
+                      }}
+                      transition={{
+                        duration: 2 + i * 0.5,
+                        repeat: Infinity,
+                        delay: i * 0.3,
+                      }}
+                    />
+                  ))}
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
 
-        <div className="space-y-4">
-          <div className="glass-card-static p-5">
-            <SessionCodeDisplay code={sessionCode} onCopy={handleCopyCode} copied={copied} />
-          </div>
+                {/* Main icon with animated ring */}
+                <div className="relative inline-block mb-8">
+                  {/* Outer pulsing ring */}
+                  <motion.div
+                    className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-indigo-500/20 to-cyan-400/20"
+                    animate={{
+                      scale: [1, 1.1, 1],
+                      opacity: [0.5, 0.2, 0.5],
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  
+                  {/* Icon container */}
+                  <motion.div 
+                    className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-400 flex items-center justify-center"
+                    animate={{ 
+                      boxShadow: [
+                        '0 0 30px rgba(99, 102, 241, 0.4)',
+                        '0 0 50px rgba(99, 102, 241, 0.6)',
+                        '0 0 30px rgba(99, 102, 241, 0.4)',
+                      ],
+                      rotateY: [0, 5, 0, -5, 0],
+                    }}
+                    transition={{ duration: 4, repeat: Infinity }}
+                  >
+                    <FiMonitor className="w-12 h-12 text-white" />
+                    
+                    {/* Screen shine effect */}
+                    <motion.div
+                      className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/0 via-white/20 to-white/0"
+                      animate={{
+                        opacity: [0, 0.5, 0],
+                        x: [-40, 40],
+                      }}
+                      transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+                    />
+                  </motion.div>
+                </div>
+              
+                <h2 className="text-2xl font-bold text-white mb-3">Ready to Share Your Screen?</h2>
+                <p className="text-gray-400 mb-10 max-w-md mx-auto leading-relaxed">
+                  Start a secure session and share the code with anyone who needs to view
+                  or control your desktop remotely.
+                </p>
 
-          <div className="glass-card-static p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[var(--text-secondary)]">Control</span>
-              <ControlModeToggle controlMode={controlMode} onToggle={handleControlModeChange} disabled={viewers.length > 0} />
-            </div>
-          </div>
+                {!isScreenCaptureSupported() && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-center p-4 mb-8 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400"
+                  >
+                    <FiAlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                    <span>Screen capture not supported in this browser</span>
+                  </motion.div>
+                )}
 
-          {controlMode === 'control' && (
-            <div className="glass-card-static p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--text-secondary)]">Agent</span>
-                <span className={`text-xs font-medium flex items-center gap-1.5
-                  ${agentStatus === 'connected' ? 'text-neon-green' : 'text-neon-orange'}`}>
-                  <span className={`w-2 h-2 rounded-full ${agentStatus === 'connected' ? 'bg-neon-green' : 'bg-neon-orange'}`} />
-                  {agentStatus === 'connected' ? 'Connected' : 'Disconnected'}
-                </span>
-              </div>
-              {agentStatus !== 'connected' && (
-                <button onClick={handleLaunchAgent} className="mt-3 text-xs text-accent hover:text-white transition-colors flex items-center gap-1">
-                  <Download size={12} /> Download Agent
-                </button>
-              )}
-            </div>
-          )}
-
-          <div className="glass-card-static p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-[var(--text-secondary)]">Viewers</span>
-              <span className="text-xs font-mono text-accent">{viewers.length}</span>
-            </div>
-            {viewers.length === 0 ? (
-              <div className="text-center py-4">
-                <Users size={20} className="mx-auto text-[var(--text-muted)] mb-2" />
-                <p className="text-xs text-[var(--text-muted)]">Waiting for viewers…</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {viewers.map((v) => (
-                  <div key={v.id} className="flex items-center gap-2 p-2 rounded-lg bg-white/5">
-                    <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center text-xs text-accent font-bold">
-                      {(v.name || '?')[0].toUpperCase()}
+                {/* Enhanced Start Sharing Button */}
+                <motion.button
+                  onClick={handleStartSharing}
+                  disabled={sessionLoading || !currentDevice || !isScreenCaptureSupported()}
+                  className="group relative inline-flex items-center justify-center px-8 py-4 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-400 text-white font-semibold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: 1.03, boxShadow: '0 20px 40px rgba(99, 102, 241, 0.3)' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {/* Button shine effect */}
+                  <motion.span
+                    className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0"
+                    initial={{ x: '-100%' }}
+                    whileHover={{ x: '100%' }}
+                    transition={{ duration: 0.6 }}
+                  />
+                  
+                  {sessionLoading ? (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Starting Session...</span>
                     </div>
-                    <span className="text-sm text-white truncate">{v.name}</span>
-                  </div>
+                  ) : (
+                    <span className="flex items-center space-x-3">
+                      <FiShare2 className="w-6 h-6" />
+                      <span>Start Sharing</span>
+                      <motion.span
+                        animate={{ x: [0, 4, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      >
+                        →
+                      </motion.span>
+                    </span>
+                  )}
+                </motion.button>
+
+                {!currentDevice && (
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-sm text-gray-500 mt-6 flex items-center justify-center"
+                  >
+                    <LoadingSpinner size="sm" />
+                    <span className="ml-2">Registering your device...</span>
+                  </motion.p>
+                )}
+              </div>
+            </div>
+
+            {/* Tips Section */}
+            <div className="glass-card p-6">
+              <h3 className="font-semibold text-white mb-5 flex items-center">
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center mr-3">
+                  💡
+                </span>
+                Tips for a great session
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {[
+                  { icon: '🌐', tip: 'Use a stable internet connection' },
+                  { icon: '🧹', tip: 'Close unnecessary applications' },
+                  { icon: '👁️', tip: 'Share only what you want visible' },
+                  { icon: '🔒', tip: 'Only share code with trusted people' },
+                ].map((item, i) => (
+                  <motion.div 
+                    key={i} 
+                    className="flex items-center space-x-3 p-4 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <span className="text-xl">{item.icon}</span>
+                    <span className="text-gray-300 text-sm">{item.tip}</span>
+                  </motion.div>
                 ))}
               </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Sharing/Connected Step */}
+        {(step === 'sharing' || step === 'connected') && session && (
+          <motion.div
+            key="sharing"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-6"
+          >
+            <SessionCodeDisplay 
+              code={session.sessionCode}
+              onCopy={handleCopyCode}
+              copied={codeCopied}
+              onLaunchAgent={handleLaunchAgent}
+              agentConnected={agentConnected}
+            />
+
+            {/* Control Mode Toggle - GetScreen Style */}
+            <ControlModeToggle 
+              mode={controlMode} 
+              onChange={handleControlModeChange} 
+              viewerConnected={step === 'connected'} 
+            />
+
+            {/* Control Info Card */}
+            {controlMode === 'full-control' && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-4 border border-amber-500/20 bg-amber-500/5"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <FiAlertCircle className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-amber-400 font-medium mb-1">Remote Control Active</h4>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Viewer can send control commands. You'll see notifications when they click or interact.
+                      For full OS-level control, a native desktop agent is required.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
             )}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
 
-  /* ─── Step: Connected ─── */
-  const renderConnected = () => (
-    <motion.div
-      key="connected"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="space-y-6"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-neon-green animate-pulse" />
-          <h2 className="text-lg font-display font-bold text-white">
-            Connected · {viewers.length} viewer{viewers.length !== 1 ? 's' : ''}
-          </h2>
-        </div>
-        <div className="flex items-center gap-3">
-          <ControlModeToggle controlMode={controlMode} onToggle={handleControlModeChange} />
-          <button onClick={handleStopSharing} className="btn-danger flex items-center gap-2 text-sm">
-            <Square size={14} /> End Session
-          </button>
-        </div>
-      </div>
+            {/* Connection Status */}
+            <div className="text-center">
+              {step === 'sharing' && (
+                <div className="inline-flex items-center space-x-2 text-amber-400">
+                  <FiWifi className="w-5 h-5 animate-pulse" />
+                  <span>Waiting for viewer to connect...</span>
+                </div>
+              )}
 
-      <div className="grid lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3">
-          <div className="glass-card overflow-hidden">
-            <div className="p-3 border-b border-white/5 flex items-center justify-between">
-              <span className="text-sm font-medium text-white flex items-center gap-2">
-                <Monitor size={16} className="text-accent" /> Live Preview
-              </span>
-              <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
-                <span className="flex items-center gap-1">
-                  <Users size={12} /> {viewers.length}
-                </span>
-                <span className="flex items-center gap-1">
-                  {controlMode === 'control' ? <Unlock size={12} className="text-neon-purple" /> : <Lock size={12} />}
-                  {controlMode === 'control' ? 'Control' : 'View'}
-                </span>
-              </div>
-            </div>
-            <div className="aspect-video bg-black/40">
-              {localStream ? (
-                <RemoteScreen stream={localStream} muted isLocal />
-              ) : (
-                <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">
-                  No preview available
+              {step === 'connected' && viewerInfo && (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="inline-flex items-center space-x-3 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400">
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                    <span>Connected: {viewerInfo.viewerEmail}</span>
+                  </div>
+                  <div className={`inline-flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm ${
+                    controlMode === 'full-control' 
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                      : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                  }`}>
+                    {controlMode === 'full-control' ? (
+                      <>
+                        <FiUnlock className="w-4 h-4" />
+                        <span>Full Control Enabled</span>
+                      </>
+                    ) : (
+                      <>
+                        <FiLock className="w-4 h-4" />
+                        <span>View Only Mode</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
-        </div>
 
-        <div className="space-y-4">
-          <div className="glass-card-static p-4">
-            <SessionCodeDisplay code={sessionCode} onCopy={handleCopyCode} copied={copied} />
-          </div>
-
-          <div className="glass-card-static p-4">
-            <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
-              <Users size={14} className="text-accent" /> Viewers
-            </h3>
-            <div className="space-y-2">
-              {viewers.map((v) => (
-                <div key={v.id} className="flex items-center gap-2 p-2 rounded-lg bg-white/5">
-                  <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center text-xs text-accent font-bold">
-                    {(v.name || '?')[0].toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-sm text-white truncate block">{v.name}</span>
-                    <span className="text-[10px] text-[var(--text-muted)]">
-                      {new Date(v.joinedAt).toLocaleTimeString()}
-                    </span>
-                  </div>
+            {/* Screen Preview */}
+            <div className="glass-card p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium text-white flex items-center">
+                  <FiMonitor className="w-5 h-5 mr-2 text-indigo-400" />
+                  Your Screen Preview
+                </h3>
+                <div className="badge badge-info">
+                  <span className="w-2 h-2 rounded-full bg-current mr-2 animate-pulse" />
+                  Live
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {controlMode === 'control' && (
-            <div className="glass-card-static p-4">
-              <h3 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-                <Zap size={14} className="text-neon-purple" /> Agent
-              </h3>
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${agentStatus === 'connected' ? 'bg-neon-green' : 'bg-neon-orange'}`} />
-                <span className={`text-xs ${agentStatus === 'connected' ? 'text-neon-green' : 'text-neon-orange'}`}>
-                  {agentStatus === 'connected' ? 'Connected' : 'Disconnected'}
-                </span>
               </div>
-              {agentStatus !== 'connected' && (
-                <button onClick={handleLaunchAgent} className="mt-2 text-xs text-accent hover:text-white transition-colors flex items-center gap-1">
-                  <Download size={12} /> Download
-                </button>
-              )}
+              
+              <div className="screen-preview aspect-video">
+                <RemoteScreen
+                  stream={localStream}
+                  showControls={true}
+                />
+              </div>
             </div>
-          )}
 
-          <div className="glass-card-static p-4">
-            <h3 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-              <Wifi size={14} className="text-accent" /> Connection
-            </h3>
-            <ConnectionStatus state={connectionState} />
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="p-3 rounded-lg bg-neon-red/10 border border-neon-red/20 text-neon-red text-sm flex items-center gap-2">
-          <AlertCircle size={16} /> {error}
-        </div>
-      )}
-    </motion.div>
-  );
-
-  /* ─── Render ─── */
-  return (
-    <div className="min-h-[calc(100vh-4rem)] p-4 md:p-6">
-      <AnimatePresence mode="wait">
-        {step === 'setup' && renderSetup()}
-        {step === 'sharing' && renderSharing()}
-        {step === 'connected' && renderConnected()}
+            {/* Stop Button */}
+            <div className="flex justify-center">
+              <motion.button
+                onClick={handleStopSharing}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="btn-danger inline-flex items-center space-x-2"
+              >
+                <FiX className="w-5 h-5" />
+                <span>Stop Sharing</span>
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
 }
+
+export default HostSession;

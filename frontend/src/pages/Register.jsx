@@ -1,180 +1,265 @@
+/**
+ * Register Page - Modern Clean Design
+ */
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FiUser, FiMail, FiLock, FiArrowRight, FiZap, FiEye, FiEyeOff } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, ArrowRight, Zap, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store';
+import { FloatingTechDoodles } from '../components';
 
-export default function Register() {
+// Modern Input Component
+const CyberInput = ({ label, type = 'text', value, onChange, placeholder, icon: Icon, rightElement, error }) => (
+  <div className="space-y-2">
+    {label && (
+      <label className="block text-sm font-medium text-cyan-400/80">{label}</label>
+    )}
+    <div className="relative group">
+      {Icon && (
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-cyan-400 transition-colors z-10">
+          <Icon className="w-5 h-5" />
+        </div>
+      )}
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`
+          w-full py-3.5 px-4 ${Icon ? 'pl-12' : ''} ${rightElement ? 'pr-12' : ''}
+          bg-[#0a0a15] 
+          border-2 ${error ? 'border-red-500/50' : 'border-cyan-500/20'}
+          rounded-xl 
+          text-white 
+          placeholder-gray-600
+          outline-none
+          transition-all duration-300
+          focus:border-cyan-500/60
+          focus:shadow-[0_0_20px_rgba(0,240,255,0.15)]
+          hover:border-cyan-500/40
+        `}
+      />
+      {rightElement && (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10">
+          {rightElement}
+        </div>
+      )}
+    </div>
+    {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
+  </div>
+);
+
+function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  
   const navigate = useNavigate();
   const { register, isLoading } = useAuthStore();
 
   const validate = () => {
-    const e = {};
-    if (!name) e.name = 'Name is required';
-    if (!email) e.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Invalid email format';
-    if (!password) e.password = 'Password is required';
-    else if (password.length < 6) e.password = 'Must be at least 6 characters';
-    if (password !== confirmPassword) e.confirmPassword = 'Passwords do not match';
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    const newErrors = {};
+    if (!name) newErrors.name = 'Name is required';
+    if (!email) newErrors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Invalid email format';
+    if (!password) newErrors.password = 'Password is required';
+    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+    if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
+    
+    // Fixed: correct parameter order (email, password, name)
     const result = await register(email, password, name);
-    if (result.success) { toast.success('Account created!'); navigate('/dashboard'); }
-    else toast.error(result.error || 'Registration failed');
+    
+    if (result.success) {
+      toast.success('Account created successfully!');
+      navigate('/dashboard');
+    } else {
+      toast.error(result.error || 'Registration failed');
+    }
   };
 
-  const InputField = ({ label, icon: Icon, type = 'text', value, onChange, placeholder, error, rightEl }) => (
-    <div className="space-y-1.5">
-      <label className="block text-xs font-medium text-accent/80">{label}</label>
-      <div className="relative group">
-        <Icon size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-dim)] group-focus-within:text-accent transition-colors" />
-        <input
-          type={type}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          className={`w-full py-3 pl-10 ${rightEl ? 'pr-10' : 'pr-4'} bg-[var(--bg)] border-[1.5px] ${error ? 'border-[var(--danger)]/50' : 'border-[var(--border)]'} rounded-xl text-white text-sm placeholder-[var(--text-dim)] outline-none transition-all focus:border-accent focus:shadow-[0_0_12px_var(--accent-glow)] hover:border-[var(--border-hover)]`}
-        />
-        {rightEl}
-      </div>
-      {error && <p className="text-[var(--danger)] text-xs">{error}</p>}
-    </div>
-  );
-
   return (
-    <div className="min-h-screen flex bg-[var(--bg)] relative overflow-hidden">
-      <div className="absolute inset-0">
+    <div className="min-h-screen flex bg-[#050508] relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 overflow-hidden">
         <div className="grid-3d" />
         <div className="orb orb-1" />
         <div className="orb orb-2" />
         <div className="orb orb-3" />
       </div>
+      
+      {/* Floating Tech Doodles */}
+      <FloatingTechDoodles count={25} opacity={0.12} />
 
-      {/* Left - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-16 z-10">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="max-w-sm">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-neon-purple flex items-center justify-center">
-              <Zap className="text-white" size={22} />
-            </div>
-            <div>
-              <h1 className="font-display font-bold text-2xl text-white">Let'sClone</h1>
-              <p className="text-accent/70 text-xs font-medium">REMOTE DESKTOP</p>
-            </div>
-          </div>
-
-          <h2 className="text-3xl font-bold text-white mb-3 leading-tight">
-            Start your journey with <span className="gradient-text">secure remote access</span>
-          </h2>
-          <p className="text-[var(--text-muted)] mb-8">
-            Join thousands of users who trust Let'sClone for their remote desktop needs.
-          </p>
-
-          <div className="space-y-3">
-            {['Free account with full features', 'No credit card required', 'Setup in under 2 minutes'].map((f, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -15 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.1 }}
-                className="flex items-center gap-3"
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 z-10">
+        <div className="max-w-md">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="flex items-center space-x-3 mb-8">
+              <motion.div 
+                className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center"
+                whileHover={{ rotate: 180 }}
+                transition={{ duration: 0.5 }}
               >
-                <div className="w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                </div>
-                <span className="text-sm text-[var(--text-muted)]">{f}</span>
+                <FiZap className="w-7 h-7 text-white" />
               </motion.div>
-            ))}
-          </div>
-        </motion.div>
+              <div>
+                <h1 className="text-2xl font-bold text-white">Let'sClone</h1>
+                <p className="text-cyan-400 text-sm">Remote Desktop</p>
+              </div>
+            </div>
+            
+            <h2 className="text-4xl font-bold text-white mb-4 leading-tight">
+              Start your journey with{' '}
+              <span className="gradient-text">secure remote access</span>
+            </h2>
+            
+            <p className="text-gray-400 text-lg mb-8">
+              Join thousands of users who trust Let'sClone for their remote 
+              desktop needs. Free to use, always secure.
+            </p>
+
+            <div className="space-y-4">
+              {[
+                'Free account with full features',
+                'No credit card required',
+                'Setup in under 2 minutes',
+              ].map((feature, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + i * 0.1 }}
+                  className="flex items-center space-x-3"
+                >
+                  <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400" />
+                  </div>
+                  <span className="text-gray-300">{feature}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
       </div>
 
-      {/* Right - Form */}
+      {/* Right Side - Register Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="w-full max-w-sm"
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md"
         >
-          <div className="lg:hidden flex items-center justify-center gap-2.5 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-neon-purple flex items-center justify-center">
-              <Zap className="text-white" size={18} />
-            </div>
-            <h1 className="font-display font-bold text-xl text-white">Let'sClone</h1>
-          </div>
-
-          <div className="glass-card p-7">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-white mb-1">Create Account</h2>
-              <p className="text-[var(--text-muted)] text-sm">Get started with your free account</p>
+          <div className="glass-card p-8">
+            {/* Mobile Logo */}
+            <div className="lg:hidden flex items-center justify-center space-x-3 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center">
+                <FiZap className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-xl font-bold text-white">Let'sClone</h1>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3.5">
-              <InputField label="Full Name" icon={User} value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" error={errors.name} />
-              <InputField label="Email" icon={Mail} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" error={errors.email} />
-              <InputField
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-white mb-2">Create Account</h2>
+              <p className="text-gray-400">Get started with your free account</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name Input */}
+              <CyberInput
+                label="Full Name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                icon={FiUser}
+                error={errors.name}
+              />
+
+              {/* Email Input */}
+              <CyberInput
+                label="Email Address"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                icon={FiMail}
+                error={errors.email}
+              />
+
+              {/* Password Input */}
+              <CyberInput
                 label="Password"
-                icon={Lock}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                icon={FiLock}
                 error={errors.password}
-                rightEl={
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-dim)] hover:text-accent transition-colors">
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                rightElement={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-500 hover:text-cyan-400 transition-colors p-1"
+                  >
+                    {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
                   </button>
                 }
               />
-              <InputField
+
+              {/* Confirm Password */}
+              <CyberInput
                 label="Confirm Password"
-                icon={Lock}
                 type={showPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
+                icon={FiLock}
                 error={errors.confirmPassword}
               />
 
+              {/* Submit Button */}
               <motion.button
                 type="submit"
                 disabled={isLoading}
-                className="btn-primary w-full flex items-center justify-center gap-2 py-3 disabled:opacity-50 mt-2"
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="btn-primary w-full flex items-center justify-center space-x-2 py-4 mt-6 disabled:opacity-50"
               >
                 {isLoading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
                     <span>Create Account</span>
-                    <ArrowRight size={16} />
+                    <FiArrowRight className="w-5 h-5" />
                   </>
                 )}
               </motion.button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-[var(--text-muted)] text-sm">
-                Already have an account?{' '}
-                <Link to="/login" className="text-accent font-semibold hover:text-accent/80 transition-colors">
-                  Sign in
-                </Link>
-              </p>
-            </div>
+            {/* Sign In Link */}
+            <p className="text-center text-gray-400 mt-6">
+              Already have an account?{' '}
+              <Link to="/login" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
+                Sign In
+              </Link>
+            </p>
           </div>
         </motion.div>
       </div>
@@ -182,3 +267,4 @@ export default function Register() {
   );
 }
 
+export default Register;
