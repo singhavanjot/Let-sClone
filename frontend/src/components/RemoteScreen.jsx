@@ -4,7 +4,7 @@
  */
 
 import { useRef, useEffect, useState } from 'react';
-import { FiMaximize, FiMinimize, FiSettings } from 'react-icons/fi';
+import { Maximize, Minimize, Settings } from 'lucide-react';
 
 function RemoteScreen({
   stream,
@@ -92,7 +92,7 @@ function RemoteScreen({
         <div className="flex items-center justify-center h-full min-h-[400px]">
           <div className="text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-dark-700 flex items-center justify-center">
-              <FiSettings className="w-8 h-8 text-gray-500 animate-spin-slow" />
+              <Settings size={32} className="text-[var(--text-muted)] animate-spin" />
             </div>
             <p className="text-gray-400">Waiting for screen share...</p>
           </div>
@@ -115,9 +115,9 @@ function RemoteScreen({
                 title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
               >
                 {isFullscreen ? (
-                  <FiMinimize className="w-5 h-5" />
+                  <Minimize size={20} />
                 ) : (
-                  <FiMaximize className="w-5 h-5" />
+                  <Maximize size={20} />
                 )}
               </button>
             </div>

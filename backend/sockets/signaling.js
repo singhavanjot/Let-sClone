@@ -89,7 +89,7 @@ const initializeSocketServer = (server) => {
       connectedAt: new Date()
     });
 
-    // Fetch fresh TURN credentials and send to client
+     // Fetch fresh TURN credentials and send to client
     try {
       const iceServers = await webrtcConfig.getIceServers();
       const iceConfig = { iceServers };

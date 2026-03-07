@@ -5,20 +5,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  FiMonitor, 
-  FiMaximize2,
-  FiMinimize2,
-  FiX,
-  FiMousePointer,
-  FiWifi,
-  FiWifiOff,
-  FiActivity,
-  FiRefreshCw,
-  FiLock,
-  FiUnlock,
-  FiEye
-} from 'react-icons/fi';
+import {
+  Monitor, Maximize2, Minimize2, X, MousePointer,
+  Wifi, WifiOff, Activity, RefreshCw, Lock, Unlock, Eye
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LoadingSpinner } from '../components';
 import { useWebRTC, useSocket } from '../hooks';
@@ -27,18 +17,18 @@ import { useDeviceStore, useSessionStore } from '../store';
 // Stats Panel
 const StatsPanel = ({ stats }) => (
   <div className="glass-card p-4">
-    <h3 className="text-sm font-medium text-gray-400 mb-3">Connection Stats</h3>
+    <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Connection Stats</h3>
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-gray-500 text-sm">Latency</span>
+        <span className="text-[var(--text-muted)] text-sm">Latency</span>
         <span className="text-white font-mono text-sm">{stats.latency || '--'}ms</span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-gray-500 text-sm">Quality</span>
-        <span className="text-emerald-400 font-mono text-sm">{stats.quality || 'Good'}</span>
+        <span className="text-[var(--text-muted)] text-sm">Quality</span>
+        <span className="text-neon-green font-mono text-sm">{stats.quality || 'Good'}</span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-gray-500 text-sm">Resolution</span>
+        <span className="text-[var(--text-muted)] text-sm">Resolution</span>
         <span className="text-white font-mono text-sm">{stats.resolution || '1920x1080'}</span>
       </div>
     </div>
@@ -287,9 +277,9 @@ const InteractiveRemoteScreen = ({
         <div className="flex items-center justify-center h-full min-h-[400px]">
           <div className="text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-800 flex items-center justify-center">
-              <FiMonitor className="w-8 h-8 text-gray-500 animate-pulse" />
+              <Monitor size={32} className="text-[var(--text-muted)] animate-pulse" />
             </div>
-            <p className="text-gray-400">Waiting for screen share...</p>
+            <p className="text-[var(--text-secondary)]">Waiting for screen share...</p>
           </div>
         </div>
       )}
@@ -509,11 +499,11 @@ function ViewerSession() {
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="w-16 h-16 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 mx-auto mb-6"
+            className="w-16 h-16 rounded-full border-4 border-accent/30 border-t-indigo-500 mx-auto mb-6"
           />
           <h2 className="text-xl font-semibold text-white mb-2">Connecting...</h2>
-          <p className="text-gray-400">Establishing secure connection to session</p>
-          <p className="text-indigo-400 font-mono mt-4">{sessionCode}</p>
+          <p className="text-[var(--text-secondary)]">Establishing secure connection to session</p>
+          <p className="text-accent font-mono mt-4">{sessionCode}</p>
         </div>
       </div>
     );
@@ -530,10 +520,10 @@ function ViewerSession() {
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center glass-card p-8 max-w-md">
           <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
-            <FiWifiOff className="w-8 h-8 text-red-400" />
+            <WifiOff size={32} className="text-neon-red" />
           </div>
-          <h2 className="text-xl font-semibold text-white mb-2">Connection Lost</h2>
-          <p className="text-gray-400 mb-6">
+          <h2 className="text-xl font-display font-semibold text-white mb-2">Connection Lost</h2>
+          <p className="text-[var(--text-secondary)] mb-6">
             {webrtcError || 'The connection to the remote session was lost. Make sure the host has started screen sharing.'}
           </p>
           <div className="flex justify-center space-x-4">
@@ -543,7 +533,7 @@ function ViewerSession() {
               whileTap={{ scale: 0.98 }}
               className="btn-secondary inline-flex items-center space-x-2"
             >
-              <FiRefreshCw className="w-4 h-4" />
+              <RefreshCw size={16} />
               <span>Retry</span>
             </motion.button>
             <motion.button
@@ -569,27 +559,27 @@ function ViewerSession() {
           animate={{ opacity: 1, y: 0 }}
           className={`p-4 rounded-xl border ${
             hostAllowsControl 
-              ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30' 
-              : 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30'
+              ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-neon-purple/30' 
+              : 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-accent/30'
           }`}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                 hostAllowsControl 
-                  ? 'bg-purple-500/20' 
-                  : 'bg-cyan-500/20'
+                  ? 'bg-neon-purple/20' 
+                  : 'bg-accent/20'
               }`}>
                 {hostAllowsControl 
-                  ? <FiMousePointer className="w-5 h-5 text-purple-400" />
-                  : <FiEye className="w-5 h-5 text-cyan-400" />
+                  ? <MousePointer size={20} className="text-neon-purple" />
+                  : <Eye size={20} className="text-accent" />
                 }
               </div>
               <div>
-                <p className={`font-semibold ${hostAllowsControl ? 'text-purple-400' : 'text-cyan-400'}`}>
+                <p className={`font-semibold ${hostAllowsControl ? 'text-neon-purple' : 'text-accent'}`}>
                   {hostAllowsControl ? '🎮 Remote Control Enabled' : '👁️ View Only Mode'}
                 </p>
-                <p className="text-gray-400 text-sm">
+                <p className="text-[var(--text-secondary)] text-sm">
                   {hostAllowsControl 
                     ? 'You can control the host\'s mouse and keyboard' 
                     : 'Host has restricted control. You can only view the screen.'
@@ -604,7 +594,7 @@ function ViewerSession() {
                 whileTap={{ scale: 0.95 }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   controlEnabled 
-                    ? 'bg-purple-500 text-white' 
+                    ? 'bg-neon-purple text-white' 
                     : 'bg-gray-700 text-gray-300'
                 }`}
               >
@@ -619,11 +609,11 @@ function ViewerSession() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center">
-            <FiMonitor className="w-5 h-5 mr-2 text-indigo-400" />
+            <Monitor size={20} className="mr-2 text-accent" />
             Remote Session
           </h1>
-          <p className="text-gray-400 mt-1">
-            Session Code: <span className="font-mono text-indigo-400">{sessionCode}</span>
+          <p className="text-[var(--text-secondary)] mt-1">
+            Session Code: <span className="font-mono text-accent">{sessionCode}</span>
           </p>
         </div>
         
@@ -632,12 +622,12 @@ function ViewerSession() {
           <div className={`badge ${hostAllowsControl ? 'badge-success' : 'badge-warning'}`}>
             {hostAllowsControl ? (
               <>
-                <FiUnlock className="w-3 h-3 mr-2" />
+                <Unlock size={12} className="mr-2" />
                 Control Allowed
               </>
             ) : (
               <>
-                <FiEye className="w-3 h-3 mr-2" />
+                <Eye size={12} className="mr-2" />
                 View Only
               </>
             )}
@@ -646,12 +636,12 @@ function ViewerSession() {
           <div className={`badge ${connectionState === 'connected' ? 'badge-success' : 'badge-warning'}`}>
             {connectionState === 'connected' ? (
               <>
-                <FiWifi className="w-3 h-3 mr-2" />
+                <Wifi size={12} className="mr-2" />
                 Connected
               </>
             ) : (
               <>
-                <FiActivity className="w-3 h-3 mr-2 animate-pulse" />
+                <Activity size={12} className="mr-2 animate-pulse" />
                 Connecting
               </>
             )}
@@ -674,19 +664,19 @@ function ViewerSession() {
                     whileTap={{ scale: 0.95 }}
                     className={`p-2 rounded-lg transition-all ${
                       controlEnabled 
-                        ? 'bg-purple-500/20 text-purple-400' 
-                        : 'bg-gray-700/50 text-gray-500'
+                        ? 'bg-neon-purple/20 text-neon-purple' 
+                        : 'bg-gray-700/50 text-[var(--text-muted)]'
                     }`}
                     title={controlEnabled ? 'Disable Control' : 'Enable Control'}
                   >
-                    {controlEnabled ? <FiMousePointer className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                    {controlEnabled ? <MousePointer size={20} /> : <Eye size={20} />}
                   </motion.button>
                 ) : (
-                  <div className="p-2 rounded-lg bg-gray-700/50 text-gray-500">
-                    <FiLock className="w-5 h-5" />
+                  <div className="p-2 rounded-lg bg-gray-700/50 text-[var(--text-muted)]">
+                    <Lock size={20} />
                   </div>
                 )}
-                <span className="text-sm text-gray-400">
+                <span className="text-sm text-[var(--text-secondary)]">
                   {!hostAllowsControl 
                     ? 'Host set to View Only' 
                     : controlEnabled 
@@ -701,10 +691,10 @@ function ViewerSession() {
                   onClick={toggleFullscreen}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
+                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-secondary)] hover:text-white transition-all"
                   title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
                 >
-                  {isFullscreen ? <FiMinimize2 className="w-5 h-5" /> : <FiMaximize2 className="w-5 h-5" />}
+                  {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
                 </motion.button>
                 
                 <motion.button
@@ -714,7 +704,7 @@ function ViewerSession() {
                   className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-all"
                   title="Disconnect"
                 >
-                  <FiX className="w-5 h-5" />
+                  <X size={20} />
                 </motion.button>
               </div>
             </div>
@@ -750,7 +740,7 @@ function ViewerSession() {
                     className="p-2 rounded-lg bg-black/50 hover:bg-black/80 text-white transition-all backdrop-blur-sm"
                     title="Exit Fullscreen (ESC)"
                   >
-                    <FiMinimize2 className="w-5 h-5" />
+                    <Minimize2 size={20} />
                   </motion.button>
                   <motion.button
                     onClick={handleDisconnect}
@@ -759,7 +749,7 @@ function ViewerSession() {
                     className="p-2 rounded-lg bg-red-500/50 hover:bg-red-500/80 text-white transition-all backdrop-blur-sm"
                     title="Disconnect"
                   >
-                    <FiX className="w-5 h-5" />
+                    <X size={20} />
                   </motion.button>
                 </motion.div>
               )}
@@ -768,10 +758,10 @@ function ViewerSession() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="absolute bottom-4 left-4 flex items-center space-x-2 px-3 py-1.5 bg-purple-500/20 rounded-full border border-purple-500/30"
+                  className="absolute bottom-4 left-4 flex items-center space-x-2 px-3 py-1.5 bg-neon-purple/20 rounded-full border border-neon-purple/30"
                 >
-                  <FiMousePointer className="w-3 h-3 text-purple-400" />
-                  <span className="text-purple-400 text-xs font-medium">Control Active</span>
+                  <MousePointer size={12} className="text-neon-purple" />
+                  <span className="text-neon-purple text-xs font-medium">Control Active</span>
                 </motion.div>
               )}
               
@@ -779,10 +769,10 @@ function ViewerSession() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="absolute bottom-4 left-4 flex items-center space-x-2 px-3 py-1.5 bg-cyan-500/20 rounded-full border border-cyan-500/30"
+                  className="absolute bottom-4 left-4 flex items-center space-x-2 px-3 py-1.5 bg-accent/20 rounded-full border border-accent/30"
                 >
-                  <FiEye className="w-3 h-3 text-cyan-400" />
-                  <span className="text-cyan-400 text-xs font-medium">View Only Mode</span>
+                  <Eye size={12} className="text-accent" />
+                  <span className="text-accent text-xs font-medium">View Only Mode</span>
                 </motion.div>
               )}
             </div>
@@ -795,7 +785,7 @@ function ViewerSession() {
           
           {/* Quick Actions */}
           <div className="glass-card p-4">
-            <h3 className="text-sm font-medium text-gray-400 mb-3">Quick Actions</h3>
+            <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Quick Actions</h3>
             <div className="space-y-2">
               {hostAllowsControl && (
                 <motion.button
@@ -804,7 +794,7 @@ function ViewerSession() {
                   whileTap={{ scale: 0.98 }}
                   className="w-full p-3 rounded-xl bg-white/5 hover:bg-white/10 text-left text-gray-300 text-sm flex items-center space-x-3 transition-all"
                 >
-                  {controlEnabled ? <FiEye className="w-4 h-4" /> : <FiMousePointer className="w-4 h-4" />}
+                  {controlEnabled ? <Eye size={16} /> : <MousePointer size={16} />}
                   <span>{controlEnabled ? 'Switch to View Only' : 'Enable Control'}</span>
                 </motion.button>
               )}
@@ -815,7 +805,7 @@ function ViewerSession() {
                 whileTap={{ scale: 0.98 }}
                 className="w-full p-3 rounded-xl bg-white/5 hover:bg-white/10 text-left text-gray-300 text-sm flex items-center space-x-3 transition-all"
               >
-                <FiMaximize2 className="w-4 h-4" />
+                <Maximize2 size={16} />
                 <span>Toggle Fullscreen</span>
               </motion.button>
               
@@ -825,7 +815,7 @@ function ViewerSession() {
                 whileTap={{ scale: 0.98 }}
                 className="w-full p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-left text-red-400 text-sm flex items-center space-x-3 transition-all"
               >
-                <FiX className="w-4 h-4" />
+                <X size={16} />
                 <span>Disconnect</span>
               </motion.button>
             </div>
