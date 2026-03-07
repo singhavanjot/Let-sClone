@@ -107,6 +107,13 @@ deviceSchema.methods.setBusy = async function() {
   await this.save();
 };
 
+// Update device status to idle/online (when session ends)
+deviceSchema.methods.setIdle = async function() {
+  this.status = 'online';
+  this.lastSeen = new Date();
+  await this.save();
+};
+
 // Static method to find online devices for a user
 deviceSchema.statics.findOnlineByUser = function(userId) {
   return this.find({ userId, status: 'online', isActive: true });

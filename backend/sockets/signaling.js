@@ -89,20 +89,41 @@ const initializeSocketServer = (server) => {
       connectedAt: new Date()
     });
 
-    // Send WebRTC configuration to client
-    const iceConfig = {
-      iceServers: webrtcConfig.iceServers
-    };
-    logger.info(`Sending ICE config with ${iceConfig.iceServers.length} servers`);
-    socket.emit('config', iceConfig);
-
-    /**
-     * Request config (for clients that missed the initial config)
-     */
-    socket.on('get-config', () => {
-      logger.info(`Config requested by ${socket.id}`);
+    // Fetch fresh TURN credentials and send to client
+    try {
+      const iceServers = await webrtcConfig.getIceServers();
+      const iceConfig = { iceServers };
+      const turnCount = iceServers.filter(s => {
+        const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
+        return urls.some(u => typeof u === 'string' && u.includes('turn'));
+      }).length;
+      
+      logger.info(`✅ Client ${socket.id}: Sending ${iceServers.length} ICE servers (${turnCount} TURN)`);
+      
+      // Send config immediately
       socket.emit('config', iceConfig);
-    });
+      
+      // Handle re-requests
+      socket.on('get-config', async () => {
+        logger.info(`Config re-requested by ${socket.id}`);
+        const freshServers = await webrtcConfig.getIceServers();
+        socket.emit('config', { iceServers: freshServers });
+      });
+    } catch (err) {
+      logger.error('Failed to fetch ICE config:', err);
+      // Send at least STUN servers
+      socket.emit('config', { iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]});
+      
+      socket.on('get-config', () => {
+        socket.emit('config', { iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]});
+      });
+    }
 
     /**
      * Register device as online

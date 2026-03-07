@@ -36,6 +36,26 @@ const createSession = async (req, res) => {
       });
     }
     
+    // Clean up expired sessions for this device
+    try {
+      await Session.updateMany(
+        {
+          hostDevice: device._id,
+          active: true,
+          expiresAt: { $lt: new Date() }
+        },
+        {
+          $set: {
+            active: false,
+            status: 'ended',
+            endTime: new Date()
+          }
+        }
+      );
+    } catch (cleanupError) {
+      logger.error('Session cleanup error:', cleanupError);
+    }
+    
     // Check if device already has an active session
     const existingSession = await Session.findOne({
       hostDevice: device._id,
@@ -44,10 +64,18 @@ const createSession = async (req, res) => {
     });
     
     if (existingSession) {
-      return res.status(409).json({
-        error: 'Device already has an active session',
-        sessionCode: existingSession.sessionCode
-      });
+      // Check if the existing session is actually active or just stuck in pending
+      const timeDiff = Date.now() - existingSession.createdAt.getTime();
+      // If session is pending for more than 5 minutes, allow new session
+      if (existingSession.status === 'pending' && timeDiff > 5 * 60 * 1000) {
+        logger.warn(`Orphaned session found: ${existingSession.sessionCode}, marking as ended`);
+        await existingSession.endSession();
+      } else {
+        return res.status(409).json({
+          error: 'Device already has an active session',
+          sessionCode: existingSession.sessionCode
+        });
+      }
     }
     
     // Create new session
@@ -257,11 +285,10 @@ const endSession = async (req, res) => {
     // End the session
     await session.endSession();
     
-    // Update host device status
+    // Update host device status back to online/idle
     const hostDevice = await Device.findById(session.hostDevice);
     if (hostDevice) {
-      hostDevice.status = 'online';
-      await hostDevice.save();
+      await hostDevice.setIdle();
     }
     
     logger.info(`Session ended: ${session.sessionCode}`);

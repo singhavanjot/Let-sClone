@@ -27,10 +27,15 @@ services:
         value: 14400000
       - key: SESSION_CODE_LENGTH
         value: 6
-      # TURN Server Configuration (get free credentials at https://www.metered.ca/stun-turn)
+      # TURN Server (REQUIRED for cross-network connections)
+      # Sign up at https://www.metered.ca/ (free 50GB/month)
+      # Go to Dashboard > App name > API Key
+      - key: METERED_API_KEY
+        sync: false  # Your Metered.ca API key
+      # Alternative: Static TURN credentials (used if METERED_API_KEY is not set)
       - key: TURN_SERVER_URL
-        sync: false  # Set to your TURN server URL, e.g., turn:global.relay.metered.ca:80
+        sync: false
       - key: TURN_USERNAME
-        sync: false  # Your TURN username
+        sync: false
       - key: TURN_CREDENTIAL
-        sync: false  # Your TURN credential/password
+        sync: false

@@ -8,87 +8,15 @@ import WebRTCManager from '../webrtc/WebRTCManager';
 import { socketService } from '../services';
 import { useAuthStore, useSessionStore } from '../store';
 
-// Default ICE servers with TURN - TURN is essential for connections behind symmetric NATs
-// IMPORTANT: If connections fail across different networks, you need working TURN servers
-// Get free TURN credentials at: https://www.metered.ca/stun-turn (500GB/month free)
+// Default ICE servers - STUN only as fallback
+// TURN credentials are fetched dynamically from the backend (via Metered.ca API)
 const DEFAULT_ICE_SERVERS = [
-  // STUN servers for NAT discovery (fast, reliable)
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
   { urls: 'stun:stun3.l.google.com:19302' },
   { urls: 'stun:stun4.l.google.com:19302' },
-  
-  // ExpressTURN free public TURN servers
-  {
-    urls: 'turn:relay1.expressturn.com:3478',
-    username: 'efGWAMG5A9QYLLYZXL',
-    credential: 'XuaGWYswaREHqCmm'
-  },
-  {
-    urls: 'turn:relay1.expressturn.com:3478?transport=tcp',
-    username: 'efGWAMG5A9QYLLYZXL',
-    credential: 'XuaGWYswaREHqCmm'
-  },
-  
-  // OpenRelay TURN servers (free, community maintained)
-  {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  // Additional Metered.ca TURN servers (more reliable)
-  {
-    urls: 'turn:a.relay.metered.ca:80',
-    username: 'e8dd65b92c62d5e62f54de02',
-    credential: 'uWdWNmkhvyqTmFXB'
-  },
-  {
-    urls: 'turn:a.relay.metered.ca:443',
-    username: 'e8dd65b92c62d5e62f54de02',
-    credential: 'uWdWNmkhvyqTmFXB'
-  },
-  {
-    urls: 'turn:a.relay.metered.ca:443?transport=tcp',
-    username: 'e8dd65b92c62d5e62f54de02',
-    credential: 'uWdWNmkhvyqTmFXB'
-  },
-  {
-    urls: 'turns:openrelay.metered.ca:443?transport=tcp',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  
-  // Metered.ca free tier - may have rate limits
-  {
-    urls: 'turn:a.relay.metered.ca:80',
-    username: 'e8dd65b92c62d5e62f54de02',
-    credential: 'uWdWNmkhvyqTmFXB'
-  },
-  {
-    urls: 'turn:a.relay.metered.ca:443?transport=tcp',
-    username: 'e8dd65b92c62d5e62f54de02',
-    credential: 'uWdWNmkhvyqTmFXB'
-  },
-  {
-    urls: 'turns:a.relay.metered.ca:443?transport=tcp',
-    username: 'e8dd65b92c62d5e62f54de02',
-    credential: 'uWdWNmkhvyqTmFXB'
-  }
 ];
-
-// Log TURN server count for debugging
-console.log(`[WebRTC] Configured ${DEFAULT_ICE_SERVERS.length} ICE servers (${DEFAULT_ICE_SERVERS.filter(s => s.urls?.toString().includes('turn')).length} TURN servers)`);
 export function useWebRTC(isHost = false) {
   const [connectionState, setConnectionState] = useState('disconnected');
   const [localStream, setLocalStream] = useState(null);
@@ -163,10 +91,10 @@ export function useWebRTC(isHost = false) {
         webrtcRef.current = new WebRTCManager();
       }
       
-      // Set default ICE servers immediately as fallback
+      // Set STUN-only defaults immediately (so we have something)
       webrtcRef.current.setIceServers(DEFAULT_ICE_SERVERS);
 
-      // Return a promise that resolves when config is received or timeout occurs
+      // Wait for server to send TURN credentials (these are essential)
       await new Promise((resolve) => {
         let resolved = false;
         
@@ -174,33 +102,43 @@ export function useWebRTC(isHost = false) {
           if (resolved) return;
           resolved = true;
           
-          console.log('Received ICE config from server:', config.iceServers?.length, 'servers');
-          if (config.iceServers && webrtcRef.current) {
-            // Use server config (includes TURN servers)
-            console.log('Using server ICE config with TURN servers');
-            webrtcRef.current.setIceServers(config.iceServers);
+          if (config.iceServers?.length > 0) {
+            const turnCount = config.iceServers.filter(s => {
+              const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
+              return urls.some(u => u?.includes('turn'));
+            }).length;
+            
+            console.log(`✅ Received ICE config: ${config.iceServers.length} servers (${turnCount} TURN)`);
+            
+            if (turnCount === 0) {
+              console.warn('⚠️ Server sent NO TURN servers! Cross-network connections will fail.');
+              console.warn('Set METERED_API_KEY on the backend. Get free key at https://www.metered.ca/');
+            }
+            
+            // Only set if webrtcRef still exists (might have been cleaned up)
+            if (webrtcRef.current) {
+              webrtcRef.current.setIceServers(config.iceServers);
+            }
           }
           resolve();
         };
 
-        // Listen for config from server
-        socketService.once('config', handleConfig);
+        // Listen for config (server sends it on connection + on request)
+        socketService.on('config', handleConfig);
         
-        // Request config
+        // Explicitly request config in case we missed the auto-send
         socketService.emit('get-config');
         
-        // Timeout after 8 seconds, continue with enhanced defaults
+        // Timeout after 5 seconds  
         setTimeout(() => {
           if (!resolved) {
-            console.warn('ICE config timeout - continuing with enhanced fallback servers');
+            console.warn('⚠️ ICE config timeout - continuing with STUN only (no TURN)');
+            console.warn('Cross-network connections may fail without TURN servers.');
             resolved = true;
             socketService.off('config', handleConfig);
-            // Use enhanced fallback servers with more TURN options
-            const enhancedFallback = [...DEFAULT_ICE_SERVERS];
-            webrtcRef.current.setIceServers(enhancedFallback);
             resolve();
           }
-        }, 8000);
+        }, 5000);
       });
       
       return true;
