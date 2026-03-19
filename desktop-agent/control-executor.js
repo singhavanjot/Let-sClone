@@ -4,10 +4,7 @@
  * No native dependencies required - pure Electron solution
  */
 
-const { exec, spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
+const { spawn } = require('child_process');
 
 // PowerShell script for mouse/keyboard control using .NET
 const PS_SCRIPT = `
@@ -137,6 +134,7 @@ const VK_CODES = {
   'ControlLeft': 0x11, 'ControlRight': 0x11,
   'AltLeft': 0x12, 'AltRight': 0x12,
   'MetaLeft': 0x5B, 'MetaRight': 0x5C,
+  'Shift': 0x10, 'Control': 0x11, 'Alt': 0x12, 'Meta': 0x5B,
   
   // Symbols
   'Minus': 0xBD, 'Equal': 0xBB,
@@ -149,7 +147,7 @@ const VK_CODES = {
   'Numpad4': 0x64, 'Numpad5': 0x65, 'Numpad6': 0x66, 'Numpad7': 0x67,
   'Numpad8': 0x68, 'Numpad9': 0x69,
   'NumpadMultiply': 0x6A, 'NumpadAdd': 0x6B, 'NumpadSubtract': 0x6D,
-  'NumpadDecimal': 0x6E, 'NumpadDivide': 0x6F,
+  'NumpadDecimal': 0x6E, 'NumpadDivide': 0x6F, 'NumpadEnter': 0x0D,
   
   // Lock keys
   'CapsLock': 0x14, 'NumLock': 0x90, 'ScrollLock': 0x91,
@@ -182,6 +180,9 @@ class ControlExecutor {
     this.initialized = false;
     this.commandQueue = [];
     this.processing = false;
+    this.workerReady = false;
+    this.startingWorker = false;
+    this.maxQueueSize = 250;
   }
 
   /**
@@ -211,6 +212,8 @@ class ControlExecutor {
         this.screenWidth = width;
         this.screenHeight = height;
       }
+
+      this.startPowerShellWorker();
       
       this.initialized = true;
       console.log(`ControlExecutor initialized. Screen: ${this.screenWidth}x${this.screenHeight}`);
@@ -260,34 +263,134 @@ class ControlExecutor {
    * Execute input command (fire and forget for speed)
    */
   executeCommand(command) {
-    const fullScript = `${PS_SCRIPT}\n${command}`;
-    
-    console.log('Running PowerShell command...');
-    
-    const ps = spawn('powershell.exe', [
+    this.enqueueCommand(command);
+  }
+
+  /**
+   * Start a persistent PowerShell process so we avoid process spawn cost per event.
+   */
+  startPowerShellWorker() {
+    if (process.platform !== 'win32') return;
+    if (this.workerReady || this.startingWorker) return;
+
+    this.startingWorker = true;
+
+    this.psProcess = spawn('powershell.exe', [
+      '-NoLogo',
       '-NoProfile',
       '-NonInteractive',
       '-ExecutionPolicy', 'Bypass',
-      '-Command', fullScript
+      '-Command', '-'
     ]);
 
-    ps.stdout.on('data', (data) => {
-      console.log('PS stdout:', data.toString());
-    });
-    
-    ps.stderr.on('data', (data) => {
-      console.error('PS stderr:', data.toString());
+    this.psProcess.stdout.on('data', () => {
+      // Intentionally ignored; input simulation commands are fire-and-forget.
     });
 
-    ps.on('error', (err) => {
-      console.error('PowerShell spawn error:', err);
-    });
-    
-    ps.on('close', (code) => {
-      if (code !== 0) {
-        console.error('PowerShell exited with code:', code);
+    this.psProcess.stderr.on('data', (data) => {
+      const err = data.toString().trim();
+      if (err) {
+        console.error('PowerShell worker stderr:', err);
       }
     });
+
+    this.psProcess.on('error', (err) => {
+      console.error('PowerShell worker error:', err);
+      this.workerReady = false;
+      this.startingWorker = false;
+    });
+
+    this.psProcess.on('close', (code) => {
+      this.workerReady = false;
+      this.startingWorker = false;
+      this.psProcess = null;
+
+      if (code !== 0) {
+        console.error('PowerShell worker exited with code:', code);
+      }
+
+      if (this.enabled) {
+        setTimeout(() => this.startPowerShellWorker(), 250);
+      }
+    });
+
+    this.psProcess.stdin.write(`${PS_SCRIPT}\n`);
+    this.workerReady = true;
+    this.startingWorker = false;
+    this.processQueue();
+  }
+
+  enqueueCommand(command) {
+    if (!command) return;
+
+    if (!this.workerReady) {
+      this.startPowerShellWorker();
+    }
+
+    if (this.commandQueue.length >= this.maxQueueSize) {
+      // Keep queue bounded under bursts by dropping the oldest command.
+      this.commandQueue.shift();
+    }
+
+    const isMoveCmd = command.includes('[InputSimulator]::MoveMouse(') &&
+      !command.includes('MouseDown') &&
+      !command.includes('MouseUp') &&
+      !command.includes('MouseClick') &&
+      !command.includes('MouseScroll');
+
+    if (isMoveCmd && this.commandQueue.length > 0) {
+      const lastIndex = this.commandQueue.length - 1;
+      const last = this.commandQueue[lastIndex];
+      const lastIsMove = last.includes('[InputSimulator]::MoveMouse(') &&
+        !last.includes('MouseDown') &&
+        !last.includes('MouseUp') &&
+        !last.includes('MouseClick') &&
+        !last.includes('MouseScroll');
+
+      // Coalesce move storms to latest point to reduce lag.
+      if (lastIsMove) {
+        this.commandQueue[lastIndex] = command;
+        return;
+      }
+    }
+
+    this.commandQueue.push(command);
+    this.processQueue();
+  }
+
+  processQueue() {
+    if (this.processing) return;
+    if (!this.workerReady || !this.psProcess || !this.psProcess.stdin.writable) return;
+    if (this.commandQueue.length === 0) return;
+
+    this.processing = true;
+
+    const flush = () => {
+      if (!this.psProcess || !this.psProcess.stdin.writable) {
+        this.processing = false;
+        return;
+      }
+
+      const next = this.commandQueue.shift();
+      if (!next) {
+        this.processing = false;
+        return;
+      }
+
+      const canContinue = this.psProcess.stdin.write(`${next}\n`);
+      if (!canContinue) {
+        this.psProcess.stdin.once('drain', flush);
+        return;
+      }
+
+      if (this.commandQueue.length > 0) {
+        setImmediate(flush);
+      } else {
+        this.processing = false;
+      }
+    };
+
+    flush();
   }
 
   /**
@@ -303,6 +406,14 @@ class ControlExecutor {
    */
   setEnabled(enabled) {
     this.enabled = enabled;
+
+    if (enabled && !this.workerReady) {
+      this.startPowerShellWorker();
+    }
+
+    if (!enabled) {
+      this.commandQueue.length = 0;
+    }
   }
 
   /**
@@ -466,6 +577,29 @@ class ControlExecutor {
     
     this.executeCommand(`[InputSimulator]::MoveMouse(${centerX}, ${centerY})`);
     console.log(`Test: Moving mouse to center (${centerX}, ${centerY})`);
+  }
+
+  shutdown() {
+    this.enabled = false;
+    this.commandQueue.length = 0;
+
+    if (this.psProcess) {
+      try {
+        this.psProcess.stdin.end();
+      } catch (error) {
+        // Ignore errors while app is shutting down.
+      }
+
+      try {
+        this.psProcess.kill();
+      } catch (error) {
+        // Ignore kill errors during teardown.
+      }
+    }
+
+    this.psProcess = null;
+    this.workerReady = false;
+    this.startingWorker = false;
   }
 }
 

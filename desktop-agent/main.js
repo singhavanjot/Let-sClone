@@ -331,4 +331,7 @@ app.on('before-quit', () => {
   if (socketClient) {
     socketClient.disconnect();
   }
+  if (controlExecutor) {
+    controlExecutor.shutdown();
+  }
 });

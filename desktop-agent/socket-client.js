@@ -32,7 +32,7 @@ class SocketClient extends EventEmitter {
       auth: {
         token: this.token
       },
-      transports: ['polling', 'websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: 1000,
