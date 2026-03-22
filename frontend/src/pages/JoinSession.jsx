@@ -212,7 +212,7 @@ function JoinSession() {
                 <LoadingSpinner size="sm" />
                 <span className="ml-2">Registering your device...</span>
               </p>
-            )}}
+            )}
           </form>
         </div>
       </motion.div>
