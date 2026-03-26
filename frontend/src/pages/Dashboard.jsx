@@ -119,7 +119,7 @@ function ElegantShape({
 
 function HeroGeometric({
   badge = 'Lets Clone',
-  title2 = 'Elevate Your Screening'
+  title1 = 'Elevate Your Screening'
 }) {
   const fadeUpVariants = {
     hidden: { opacity: 0, y: 30 },
