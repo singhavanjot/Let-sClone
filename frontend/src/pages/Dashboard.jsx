@@ -280,12 +280,12 @@ export default function Dashboard() {
 
         {/* Quick Actions */}
         <motion.div
-          className="relative z-20"
+          className="relative z-20 pt-12 md:pt-16"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.5 }}
         >
-          <h2 className="inline-flex text-2xl font-bold text-white mb-6 items-center gap-3 px-4 py-2 rounded-xl bg-[#101427]/65 border border-cyan-500/20 backdrop-blur-sm">
+          <h2 className="inline-flex text-2xl md:text-3xl font-bold text-white mb-8 items-center gap-3 px-6 py-3 rounded-2xl bg-white/[0.08] border border-cyan-500/30 backdrop-blur-xl shadow-lg">
             <FiZap className="text-cyan-400" />
             <span>Quick Actions</span>
           </h2>
@@ -312,12 +312,12 @@ export default function Dashboard() {
 
         {/* Recent Activity */}
         <motion.div
-          className="mt-10 relative z-20"
+          className="mt-16 md:mt-20 relative z-20"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.8 }}
         >
-          <h2 className="inline-flex text-2xl font-bold text-white mb-6 items-center gap-3 px-4 py-2 rounded-xl bg-[#101427]/65 border border-purple-500/20 backdrop-blur-sm">
+          <h2 className="inline-flex text-2xl md:text-3xl font-bold text-white mb-8 items-center gap-3 px-6 py-3 rounded-2xl bg-white/[0.08] border border-purple-500/30 backdrop-blur-xl shadow-lg">
             <FiClock className="text-purple-400" />
             <span>Recent Activity</span>
           </h2>
