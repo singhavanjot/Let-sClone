@@ -119,7 +119,6 @@ function ElegantShape({
 
 function HeroGeometric({
   badge = 'Lets Clone',
-  title1 = 'Lets Clone',
   title2 = 'Elevate Your Screening'
 }) {
   const fadeUpVariants = {
@@ -273,7 +272,6 @@ export default function Dashboard() {
             <span className="text-white">Welcome back, </span>
             <span className="gradient-text font-display">{user?.name || user?.username || 'User'}</span>
           </h1>
-          <p className="text-gray-400 text-lg">Your remote desktop control center</p>
         </motion.div>
 
         <HeroGeometric
