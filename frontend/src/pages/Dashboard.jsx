@@ -119,7 +119,7 @@ function ElegantShape({
 
 function HeroGeometric({
   badge = 'Lets Clone',
-  title1 = 'Welcome back',
+  title1 = 'Lets Clone',
   title2 = 'Elevate Your Screening'
 }) {
   const fadeUpVariants = {
@@ -136,7 +136,7 @@ function HeroGeometric({
   };
 
   return (
-    <div className="relative w-full min-h-[460px] flex items-center justify-center overflow-hidden mb-12">
+    <div className="relative w-full min-h-[460px] flex items-center justify-center overflow-hidden mb-12 rounded-[32px]">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.05] via-transparent to-rose-500/[0.05] blur-3xl" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#030303]/20 to-transparent" />
 
@@ -248,7 +248,7 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-x-hidden">
       {/* Animated Background */}
       <div className="cyber-bg">
         <div className="grid-3d" />
@@ -263,24 +263,38 @@ export default function Dashboard() {
       </div>
 
       <div className="relative z-10 p-6 lg:p-8 max-w-7xl mx-auto">
+        <motion.div
+          className="mb-6"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className="text-4xl lg:text-5xl font-bold mb-2">
+            <span className="text-white">Welcome back, </span>
+            <span className="gradient-text font-display">{user?.name || user?.username || 'User'}</span>
+          </h1>
+          <p className="text-gray-400 text-lg">Your remote desktop control center</p>
+        </motion.div>
+
         <HeroGeometric
           badge="Lets Clone"
-          title1={`Welcome back, ${user?.name || user?.username || 'User'}`}
+          title1="Lets Clone"
           title2="Elevate Your Screening"
         />
 
         {/* Quick Actions */}
         <motion.div
+          className="relative z-20"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.5 }}
         >
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+          <h2 className="inline-flex text-2xl font-bold text-white mb-6 items-center gap-3 px-4 py-2 rounded-xl bg-[#101427]/65 border border-cyan-500/20 backdrop-blur-sm">
             <FiZap className="text-cyan-400" />
             <span>Quick Actions</span>
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-2xl">
             <ActionCard
               icon={FiPlay}
               title="Host a Session"
@@ -302,17 +316,17 @@ export default function Dashboard() {
 
         {/* Recent Activity */}
         <motion.div
-          className="mt-10"
+          className="mt-10 relative z-20"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.8 }}
         >
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+          <h2 className="inline-flex text-2xl font-bold text-white mb-6 items-center gap-3 px-4 py-2 rounded-xl bg-[#101427]/65 border border-purple-500/20 backdrop-blur-sm">
             <FiClock className="text-purple-400" />
             <span>Recent Activity</span>
           </h2>
           
-          <div className="glass-card">
+          <div className="glass-card rounded-3xl">
             <div className="space-y-4">
               {[
                 { action: 'Session started', device: 'MacBook Pro', time: '2 hours ago', status: 'completed' },
