@@ -401,11 +401,11 @@ function HostSession() {
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex items-center justify-between flex-wrap gap-4 mb-8 p-6 rounded-2xl bg-white/[0.08] border border-indigo-500/30 backdrop-blur-xl shadow-lg"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">Host Session</h1>
-          <p className="text-gray-400 mt-1">Share your screen with remote viewers</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Host Session</h1>
+          <p className="text-gray-300 text-lg">Share your screen with remote viewers</p>
         </div>
         
         {step !== 'setup' && (
