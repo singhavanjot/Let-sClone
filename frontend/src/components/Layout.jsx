@@ -56,7 +56,7 @@ export default function Layout({ children }) {
       <AnimatePresence>
         {(sidebarOpen || window.innerWidth >= 1024) && (
           <motion.aside
-            className="sidebar fixed lg:relative w-72 h-screen z-40 flex flex-col"
+            className="sidebar fixed w-72 h-screen z-40 flex flex-col"
             initial={{ x: -300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -300, opacity: 0 }}
@@ -186,7 +186,7 @@ export default function Layout({ children }) {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto lg:ml-0 relative z-10">
+      <main className="flex-1 overflow-auto lg:ml-72 relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
