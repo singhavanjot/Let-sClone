@@ -119,7 +119,7 @@ function ElegantShape({
 
 function HeroGeometric({
   badge = 'Lets Clone',
-  title1 = 'Lets Clone',
+  title1 = 'Welcome back',
   title2 = 'Elevate Your Screening'
 }) {
   const fadeUpVariants = {
@@ -136,8 +136,9 @@ function HeroGeometric({
   };
 
   return (
-    <div className="relative w-full min-h-[480px] flex items-center justify-center overflow-hidden bg-[#030303] rounded-3xl border border-white/10 mb-10">
+    <div className="relative w-full min-h-[460px] flex items-center justify-center overflow-hidden mb-12">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.05] via-transparent to-rose-500/[0.05] blur-3xl" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#030303]/20 to-transparent" />
 
       <div className="absolute inset-0 overflow-hidden">
         <ElegantShape
@@ -193,10 +194,10 @@ function HeroGeometric({
             variants={fadeUpVariants}
             initial="hidden"
             animate="visible"
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.08] mb-8 md:mb-12"
+            className="inline-flex items-center gap-3 px-7 py-3 rounded-full bg-white/[0.04] border border-white/[0.1] mb-8 md:mb-10"
           >
-            <span className="h-2 w-2 rounded-full bg-rose-500/80" />
-            <span className="text-sm text-white/60 tracking-wide">{badge}</span>
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-500/80" />
+            <span className="text-lg md:text-xl font-semibold text-white/85 tracking-wide">{badge}</span>
           </motion.div>
 
           <motion.div
@@ -205,12 +206,11 @@ function HeroGeometric({
             initial="hidden"
             animate="visible"
           >
-            <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-6 md:mb-8 tracking-tight">
-              <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80">
+            <h1 className="font-bold mb-4 md:mb-6 tracking-tight">
+              <span className="block text-xl sm:text-2xl md:text-3xl text-white/90 font-semibold mb-3">
                 {title1}
               </span>
-              <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">
+              <span className="inline-block px-4 py-2 text-4xl sm:text-6xl md:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">
                 {title2}
               </span>
             </h1>
@@ -222,11 +222,14 @@ function HeroGeometric({
             initial="hidden"
             animate="visible"
           >
+            <p className="text-sm sm:text-base text-white/55 max-w-2xl mx-auto leading-relaxed">
+              Your remote desktop control center
+            </p>
           </motion.div>
         </div>
       </div>
 
-      <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-transparent to-[#030303]/80 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/80 via-transparent to-[#030303]/70 pointer-events-none" />
     </div>
   );
 }
