@@ -119,7 +119,8 @@ function ElegantShape({
 
 function HeroGeometric({
   badge = 'Lets Clone',
-  title1 = 'Elevate Your Screening'
+  title1 = 'Lets Clone',
+  title2 = 'Elevate Your Screening'
 }) {
   const fadeUpVariants = {
     hidden: { opacity: 0, y: 30 },
@@ -206,9 +207,6 @@ function HeroGeometric({
             animate="visible"
           >
             <h1 className="font-bold mb-4 md:mb-6 tracking-tight">
-              <span className="block text-xl sm:text-2xl md:text-3xl text-white/90 font-semibold mb-3">
-                {title1}
-              </span>
               <span className="inline-block px-4 py-2 text-4xl sm:text-6xl md:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">
                 {title2}
               </span>
