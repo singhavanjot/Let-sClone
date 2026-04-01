@@ -177,7 +177,13 @@ function HostSession() {
   const [controlMode, setControlMode] = useState('full-control'); // 'view-only' or 'full-control'
   const [agentConnected, setAgentConnected] = useState(false);
   
-  const { currentDevice, getOrCreateDevice, fetchDevices } = useDeviceStore();
+  const {
+    currentDevice,
+    getOrCreateDevice,
+    fetchDevices,
+    isLoading: deviceLoading,
+    error: deviceError
+  } = useDeviceStore();
   const { createSession, endSession, isLoading: sessionLoading } = useSessionStore();
   const { isConnected: socketConnected, registerDevice, on, off, emit } = useSocket();
   const { token } = useAuthStore();
@@ -262,10 +268,20 @@ function HostSession() {
   }, []);
 
   useEffect(() => {
-    if (!currentDevice) {
-      getOrCreateDevice();
-    }
+    const initializeDevice = async () => {
+      if (!currentDevice) {
+        await getOrCreateDevice();
+      }
+    };
+
+    initializeDevice();
   }, [currentDevice, getOrCreateDevice]);
+
+  useEffect(() => {
+    if (deviceError) {
+      toast.error(deviceError);
+    }
+  }, [deviceError]);
 
   useEffect(() => {
     if (socketConnected && currentDevice) {
@@ -368,6 +384,15 @@ function HostSession() {
       toast.error(error.message || 'Failed to start sharing');
       setStep('setup');
     }
+  };
+
+  const handleRetryDeviceRegistration = async () => {
+    const device = await getOrCreateDevice();
+    if (!device) {
+      toast.error('Device registration failed. Please try again.');
+      return;
+    }
+    toast.success('Device registered successfully');
   };
 
   const handleStopSharing = async () => {
@@ -559,7 +584,7 @@ function HostSession() {
                   )}
                 </motion.button>
 
-                {!currentDevice && (
+                {!currentDevice && deviceLoading && (
                   <motion.p 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -568,6 +593,26 @@ function HostSession() {
                     <LoadingSpinner size="sm" />
                     <span className="ml-2">Registering your device...</span>
                   </motion.p>
+                )}
+
+                {!currentDevice && !deviceLoading && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-6 flex flex-col items-center gap-3"
+                  >
+                    <p className="text-sm text-red-400">
+                      {deviceError || 'Device registration failed'}
+                    </p>
+                    <motion.button
+                      onClick={handleRetryDeviceRegistration}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25 transition-all"
+                    >
+                      Retry Device Registration
+                    </motion.button>
+                  </motion.div>
                 )}
               </div>
             </div>
