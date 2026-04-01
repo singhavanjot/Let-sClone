@@ -12,7 +12,8 @@ export function useSocket() {
   const [error, setError] = useState(null);
   
   const token = useAuthStore((state) => state.token);
-  const connectionAttempted = useRef(false);
+  const retryTimeoutRef = useRef(null);
+  const retryAttemptRef = useRef(0);
 
   /**
    * Connect to the socket server
@@ -85,11 +86,48 @@ export function useSocket() {
 
   // Auto-connect when token is available
   useEffect(() => {
-    if (token && !connectionAttempted.current) {
-      connectionAttempted.current = true;
-      connect();
+    const clearRetryTimer = () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+    };
+
+    const scheduleRetry = () => {
+      retryAttemptRef.current += 1;
+      const delay = Math.min(10000, 1000 * Math.pow(2, retryAttemptRef.current - 1));
+
+      retryTimeoutRef.current = setTimeout(async () => {
+        const success = await connect();
+        if (!success && token) {
+          scheduleRetry();
+        }
+      }, delay);
+    };
+
+    if (!token) {
+      clearRetryTimer();
+      retryAttemptRef.current = 0;
+      disconnect();
+      return;
     }
-  }, [token, connect]);
+
+    let isActive = true;
+
+    const initialConnect = async () => {
+      const success = await connect();
+      if (!success && isActive) {
+        scheduleRetry();
+      }
+    };
+
+    initialConnect();
+
+    return () => {
+      isActive = false;
+      clearRetryTimer();
+    };
+  }, [token, connect, disconnect]);
 
   // Update connection state based on socket events
   useEffect(() => {

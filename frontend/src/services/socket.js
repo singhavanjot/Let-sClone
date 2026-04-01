@@ -26,9 +26,16 @@ class SocketService {
         return;
       }
 
+      // Clean up stale socket instance before creating a fresh connection.
+      if (this.socket && !this.socket.connected) {
+        this.socket.removeAllListeners();
+        this.socket.disconnect();
+        this.socket = null;
+      }
+
       this.socket = io(SOCKET_URL, {
         auth: { token },
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,

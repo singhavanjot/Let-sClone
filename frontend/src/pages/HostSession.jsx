@@ -303,18 +303,19 @@ function HostSession() {
       toast.success(`${data.viewerEmail || 'Viewer'} connected!`);
     };
 
-    const handleViewerLeft = () => {
+    const handlePeerDisconnected = (data) => {
+      if (data?.isHost) return;
       setViewerInfo(null);
       setStep('sharing');
       toast('Viewer disconnected', { icon: '⚠️' });
     };
 
-    on('viewer-joined', handleViewerJoined);
-    on('viewer-left', handleViewerLeft);
+    on('viewer:joined', handleViewerJoined);
+    on('peer:disconnected', handlePeerDisconnected);
 
     return () => {
-      off('viewer-joined', handleViewerJoined);
-      off('viewer-left', handleViewerLeft);
+      off('viewer:joined', handleViewerJoined);
+      off('peer:disconnected', handlePeerDisconnected);
     };
   }, [on, off]);
 
